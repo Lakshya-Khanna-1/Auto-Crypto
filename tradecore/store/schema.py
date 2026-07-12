@@ -71,6 +71,8 @@ killswitch_events = Table(
     Column("reason", String, nullable=False),
     Column("resolved", Integer, nullable=False),  # 0 or 1
     Column("resolved_time", DateTime, nullable=True),
+    Column("details_json", String, nullable=True),
+    Column("positions_flattened", Integer, nullable=True),
 )
 
 # signals Table
@@ -83,6 +85,9 @@ signals = Table(
     Column("indicator_value", Float, nullable=True),
     Column("signal_type", String, nullable=False),
     Column("executed", Integer, nullable=False),  # 0 or 1
+    Column("confidence", Float, nullable=True),
+    Column("risk_decision", String, nullable=True),
+    Column("risk_reason", String, nullable=True),
 )
 
 # app_kv Table
