@@ -71,7 +71,8 @@ def test_strategy_atr_stop_loss():
     strategy = EMATrendStrategy()
 
     # Let's simulate a position at index 150 where close is 200.0
-    # If we set stop_price higher than the current index 151 close (which is 200.0), e.g. stop_price = 205.0
+    # If we set stop_price higher than the current index 151 close (which is 200.0)
+    # e.g. stop_price = 205.0
     pos = Position(
         id="pos_2",
         symbol="BTC/USDT",

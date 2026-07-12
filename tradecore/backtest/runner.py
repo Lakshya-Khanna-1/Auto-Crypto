@@ -1,6 +1,5 @@
 import pandas as pd
-from backtesting import Backtest
-from backtesting import Strategy as BtStrategy
+from backtesting import Backtest, Strategy as BtStrategy
 
 from tradecore.execution.adapter import Position
 from tradecore.strategy.ema_trend import EMATrendStrategy
@@ -47,7 +46,7 @@ class BacktestStrategyWrapper(BtStrategy):
                 # stop_price = entryPrice - atrStopMult * ATR
                 stop_price = close_price - self.strat.atr_stop_mult * atr_val
                 self.curr_stop_price = stop_price
-                self.buy(sl=stop_price)
+                self.buy(sl=stop_price, size=0.95)
             elif signal.side == "flat" and self.position:
                 self.position.close()
                 self.curr_stop_price = None
@@ -106,7 +105,7 @@ def run_backtest(
     bt = Backtest(
         df_bt,
         ActiveBtStrategy,
-        cash=init_cash,
+        cash=init_cash * 1000.0,
         commission=commission,
         spread=spread,
         finalize_trades=True,
@@ -119,23 +118,17 @@ def run_backtest(
         "total_return_pct": float(stats["Return [%]"]),
         "max_drawdown_pct": float(stats["Max. Drawdown [%]"]),
         "sharpe_ratio": (
-            float(stats["Sharpe Ratio"])
-            if not pd.isna(stats["Sharpe Ratio"])
-            else 0.0
+            float(stats["Sharpe Ratio"]) if not pd.isna(stats["Sharpe Ratio"]) else 0.0
         ),
         "win_rate_pct": (
-            float(stats["Win Rate [%]"])
-            if not pd.isna(stats["Win Rate [%]"])
-            else 0.0
+            float(stats["Win Rate [%]"]) if not pd.isna(stats["Win Rate [%]"]) else 0.0
         ),
         "trades_count": int(stats["# Trades"]),
         "profit_factor": (
-            float(stats["Profit Factor"])
-            if not pd.isna(stats["Profit Factor"])
-            else 0.0
+            float(stats["Profit Factor"]) if not pd.isna(stats["Profit Factor"]) else 0.0
         ),
         "buy_and_hold_return_pct": float(stats["Buy & Hold Return [%]"]),
-        "equity_final": float(stats["Equity Final [$]"]),
+        "equity_final": float(stats["Equity Final [$]"]) / 1000.0,
     }
 
     return metrics
