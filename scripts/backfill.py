@@ -1,6 +1,11 @@
 import argparse
+import sys
 import time
 from datetime import UTC, datetime
+from pathlib import Path
+
+# Add project root to sys.path to enable tradecore imports
+sys.path.append(str(Path(__file__).parent.parent.resolve()))
 
 import pandas as pd
 
