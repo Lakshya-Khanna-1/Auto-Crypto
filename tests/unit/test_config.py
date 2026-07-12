@@ -1,7 +1,8 @@
 import os
 from unittest import mock
-import pytest
-from tradecore.core.config import get_settings, TradingMode
+
+from tradecore.core.config import TradingMode, get_settings
+
 
 def test_load_default_settings():
     # Force reload with default Path configuration
@@ -13,12 +14,13 @@ def test_load_default_settings():
         assert settings.paper.starting_balance == 10000.0
         assert settings.risk.risk_per_trade_pct == 1.0
 
+
 def test_environment_overrides():
     custom_env = {
         "EXCHANGE_API_KEY": "test-key",
         "EXCHANGE_API_SECRET": "test-secret",
         "TELEGRAM_BOT_TOKEN": "test-token",
-        "TRADECORE_CONFIG": "config/config.yaml"
+        "TRADECORE_CONFIG": "config/config.yaml",
     }
 
     with mock.patch.dict(os.environ, custom_env):
