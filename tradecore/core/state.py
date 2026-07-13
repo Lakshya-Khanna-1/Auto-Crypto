@@ -12,6 +12,27 @@ class RuntimeState:
         self._consecutive_rejections: int = 0
         self._daily_drawdown_pct: float = 0.0
         self._total_drawdown_pct: float = 0.0
+        self._last_ticker_times: dict[str, float] = {}
+        self._last_ticker_prices: dict[str, float] = {}
+
+    def update_ticker(self, symbol: str, price: float, timestamp: float) -> None:
+        """
+        Update the cached price and timestamp of the last ticker.
+        """
+        self._last_ticker_times[symbol] = timestamp
+        self._last_ticker_prices[symbol] = price
+
+    def get_ticker_time(self, symbol: str) -> float | None:
+        """
+        Get the last cached ticker timestamp for a given symbol.
+        """
+        return self._last_ticker_times.get(symbol)
+
+    def get_ticker_price(self, symbol: str) -> float | None:
+        """
+        Get the last cached ticker close price for a given symbol.
+        """
+        return self._last_ticker_prices.get(symbol)
 
     @property
     def current_mode(self) -> TradingMode:

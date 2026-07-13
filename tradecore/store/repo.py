@@ -1,8 +1,9 @@
-from datetime import datetime, UTC
-from sqlalchemy import insert, select, update, func
+from datetime import UTC, datetime
+
+from sqlalchemy import func, insert, select, update
 
 from tradecore.store.db import get_engine
-from tradecore.store.schema import app_kv, signals, killswitch_events, positions
+from tradecore.store.schema import app_kv, killswitch_events, positions, signals
 
 
 def get_kv(key: str) -> str | None:
@@ -92,9 +93,7 @@ def get_open_positions(mode: str) -> list[dict]:
     """
     engine = get_engine()
     with engine.connect() as conn:
-        stmt = select(positions).where(
-            (positions.c.mode == mode) & (positions.c.status == "open")
-        )
+        stmt = select(positions).where(positions.c.mode == mode)
         rows = conn.execute(stmt).fetchall()
         # Convert row objects/mappings to dicts for clean usage
         return [dict(row._mapping) for row in rows]
@@ -106,7 +105,5 @@ def get_open_positions_count(mode: str) -> int:
     """
     engine = get_engine()
     with engine.connect() as conn:
-        stmt = select(func.count()).select_from(positions).where(
-            (positions.c.mode == mode) & (positions.c.status == "open")
-        )
+        stmt = select(func.count()).select_from(positions).where(positions.c.mode == mode)
         return conn.execute(stmt).scalar() or 0

@@ -5,17 +5,18 @@ Revises: e289ccc9edd8
 Create Date: 2026-07-12 14:46:10.644292
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '3af27c5eee26'
-down_revision: Union[str, None] = 'e289ccc9edd8'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "3af27c5eee26"
+down_revision: str | None = "e289ccc9edd8"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -23,7 +24,9 @@ def upgrade() -> None:
     op.add_column("signals", sa.Column("risk_decision", sa.String(), nullable=True))
     op.add_column("signals", sa.Column("risk_reason", sa.String(), nullable=True))
     op.add_column("killswitch_events", sa.Column("details_json", sa.String(), nullable=True))
-    op.add_column("killswitch_events", sa.Column("positions_flattened", sa.Integer(), nullable=True))
+    op.add_column(
+        "killswitch_events", sa.Column("positions_flattened", sa.Integer(), nullable=True)
+    )
 
 
 def downgrade() -> None:

@@ -24,11 +24,12 @@ def calculate_position_size(
       qty * entry_price <= remaining_exposure_allowance
 
     Returns:
-      float: The calculated quantity (0.0 if calculations are invalid or size is below min notional).
+      float: The calculated quantity (0.0 if calculations are invalid or size is under min).
     """
     if stop_price is None or stop_price >= entry_price or entry_price <= 0:
         logger.warning(
-            f"Invalid prices for sizing: entry_price={entry_price}, stop_price={stop_price}. Sizing aborted."
+            f"Invalid prices for sizing: entry_price={entry_price}, "
+            f"stop_price={stop_price}. Sizing aborted."
         )
         return 0.0
 
@@ -55,7 +56,8 @@ def calculate_position_size(
     # Check against minimum notional limit
     if notional < min_notional:
         logger.warning(
-            f"Calculated notional {notional:.2f} is below exchange minimum notional {min_notional:.2f}. Rejecting size."
+            f"Calculated notional {notional:.2f} is below exchange minimum notional "
+            f"{min_notional:.2f}. Rejecting size."
         )
         return 0.0
 
