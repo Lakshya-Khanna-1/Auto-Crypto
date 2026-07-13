@@ -18,3 +18,5 @@ __pycache__/
 # Test and lint cache directories
 .pytest_cache/
 .ruff_cache/
+
+Handover.md

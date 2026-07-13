@@ -143,8 +143,74 @@ async def lifespan(fastapi_app: FastAPI):
     try:
         open_pos = get_open_positions(mode)
         logger.info(f"RECONCILED: Startup recovered {len(open_pos)} open positions from database.")
+
+        if mode == "live":
+            logger.info("Performing live exchange position and order startup reconciliation...")
+            from tradecore.execution.live import LiveAdapter
+            from tradecore.notifications.notifier import send_telegram_alert
+
+            adapter = LiveAdapter()
+            mismatch_detected = False
+            details = []
+
+            # Check open orders
+            try:
+                open_orders = await adapter.get_open_orders()
+                if open_orders:
+                    mismatch_detected = True
+                    details.append(
+                        f"Open orders found on exchange: {len(open_orders)} orders pending."
+                    )
+            except Exception as ex:
+                logger.error(f"Reconciliation: failed to fetch open orders: {ex}")
+                mismatch_detected = True
+                details.append(f"Failed to fetch open orders from exchange: {ex}")
+
+            # Check balances
+            try:
+                # Group active positions by base currency
+                db_by_base = {}
+                for pos in open_pos:
+                    base = pos["symbol"].split("/")[0]
+                    db_by_base[base] = db_by_base.get(base, 0.0) + pos["qty"]
+
+                exchange_bal = await adapter.exchange.fetch_balance()
+
+                for symbol in symbols:
+                    base = symbol.split("/")[0]
+                    actual_bal = (
+                        exchange_bal.get("total", {}).get(base, 0.0)
+                        or exchange_bal.get(base, {}).get("total", 0.0)
+                        or 0.0
+                    )
+                    expected_bal = db_by_base.get(base, 0.0)
+
+                    if abs(actual_bal - expected_bal) > 1e-4:
+                        mismatch_detected = True
+                        details.append(
+                            f"Balance mismatch on {base}: DB expected {expected_bal:.5f}, "
+                            f"Exchange actual {actual_bal:.5f}."
+                        )
+            except Exception as ex:
+                logger.error(f"Reconciliation: failed to fetch balance: {ex}")
+                mismatch_detected = True
+                details.append(f"Failed to fetch balance from exchange: {ex}")
+
+            if mismatch_detected:
+                logger.warning(f"Startup reconciliation mismatch: {details}")
+                state.set_strategy_paused(True)
+                # Send warning message
+                alert_msg = (
+                    "⚠️ *STARTUP RECONCILIATION MISMATCH!*\n"
+                    + "\n".join(details)
+                    + "\nTrading ticks have been PAUSED. Please resolve manually via the dashboard."
+                )
+                await send_telegram_alert(alert_msg)
+            else:
+                logger.info("Startup reconciliation complete. DB and Exchange are matched.")
+
     except Exception as e:
-        logger.error(f"Startup crash recovery position load failed: {e}")
+        logger.error(f"Startup crash recovery/reconciliation failed: {e}")
 
     # Reset consecutive error statistics on startup
     state.reset_rejections()
@@ -724,60 +790,16 @@ class ModeChangeRequest(BaseModel):
 
 @app.post("/api/mode")
 async def api_mode(req: ModeChangeRequest) -> dict:
-    state = get_state()
-    settings = get_settings()
+    from tradecore.core.state import switch_mode
 
-    target = req.target.lower()
-    if target not in ("paper", "live"):
-        raise HTTPException(status_code=400, detail="Invalid target mode chosen.")
-
-    if target == "live":
-        if req.confirmation != "GO-LIVE":
-            raise HTTPException(
-                status_code=409, detail="Must type GO-LIVE to confirm live transition."
-            )
-
-        preflight = await api_preflight()
-        # Enforce checkers
-        failed_checks = [c for c in preflight["checks"] if not c["ok"]]
-        history_only = all("history" in c["name"] for c in failed_checks)
-
-        if failed_checks:
-            if history_only and settings.live_guard.allow_override and req.override:
-                # Allowed transition per override configs
-                pass
-            else:
-                details = ", ".join([f"{c['name']} failed" for c in failed_checks])
-                raise HTTPException(status_code=409, detail=f"Live transition blocked: {details}")
-
-        # Mutate config.yaml persistence
-        from tradecore.notifications.notifier import send_telegram_alert
-
-        old_mode_str = str(state.current_mode)
-        update_config_file_mode("live")
-        state.set_mode("live")
-        await send_telegram_alert(
-            f"⚠️ *Mode Change Alert*\n"
-            f"Transition: `{old_mode_str.upper()} → LIVE`\n"
-            f"Source: Web Dashboard\n"
-            f"Override: {'Yes' if req.override else 'No'}"
-        )
-    else:
-        # Paper activation is auto-approved
-        from tradecore.notifications.notifier import send_telegram_alert
-
-        old_mode_str = str(state.current_mode)
-        update_config_file_mode("paper")
-        state.set_mode("paper")
-        await send_telegram_alert(
-            f"⚠️ *Mode Change Alert*\n"
-            f"Transition: `{old_mode_str.upper()} → PAPER`\n"
-            f"Source: Web Dashboard"
-        )
+    try:
+        await switch_mode(target=req.target, confirmation=req.confirmation, override=req.override)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
     # Publish mode transition
-    await get_event_bus().publish(Event(type="mode", data={"mode": target}))
-    return {"mode": target}
+    await get_event_bus().publish(Event(type="mode", data={"mode": req.target.lower()}))
+    return {"mode": req.target.lower()}
 
 
 def update_config_file_mode(target: str) -> None:

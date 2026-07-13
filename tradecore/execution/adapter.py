@@ -68,11 +68,20 @@ class ExecutionAdapter(ABC):
 _adapters: dict[str, ExecutionAdapter] = {}
 
 
-def get_adapter(mode: str) -> ExecutionAdapter:
+def get_adapter(mode) -> ExecutionAdapter:
     """
     Lazy singleton registry to retrieve the appropriate execution adapter.
     """
     global _adapters
+    if hasattr(mode, "value"):
+        mode = mode.value
+    else:
+        mode = str(mode)
+
+    if "." in mode:
+        mode = mode.split(".")[-1]
+    mode = mode.lower()
+
     if mode not in _adapters:
         if mode == "paper":
             from tradecore.execution.paper import PaperAdapter

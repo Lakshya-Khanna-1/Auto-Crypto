@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, insert, select, update
 
 from tradecore.store.db import get_engine
-from tradecore.store.schema import app_kv, killswitch_events, positions, signals
+from tradecore.store.schema import app_kv, killswitch_events, mode_changes, positions, signals
 
 
 def get_kv(key: str) -> str | None:
@@ -111,3 +111,26 @@ def get_open_positions_count(mode: str) -> int:
             .where((positions.c.mode == mode) & (positions.c.status == "open"))
         )
         return conn.execute(stmt).scalar() or 0
+
+
+def save_mode_change_log(
+    from_mode: str,
+    to_mode: str,
+    source: str,
+    override_used: bool,
+) -> int:
+    """
+    Log a trading mode transition event.
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        with conn.begin():
+            stmt = insert(mode_changes).values(
+                timestamp=datetime.now(UTC),
+                from_mode=from_mode,
+                to_mode=to_mode,
+                source=source,
+                override_used=1 if override_used else 0,
+            )
+            res = conn.execute(stmt)
+            return res.inserted_primary_key[0]

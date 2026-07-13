@@ -17,6 +17,9 @@ class TradingMode(str, Enum):
     PAPER = "paper"
     LIVE = "live"
 
+    def __str__(self) -> str:
+        return self.value
+
 
 class TradingSettings(BaseModel):
     mode: TradingMode
