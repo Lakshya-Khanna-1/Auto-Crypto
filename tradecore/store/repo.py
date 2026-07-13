@@ -93,7 +93,7 @@ def get_open_positions(mode: str) -> list[dict]:
     """
     engine = get_engine()
     with engine.connect() as conn:
-        stmt = select(positions).where(positions.c.mode == mode)
+        stmt = select(positions).where((positions.c.mode == mode) & (positions.c.status == "open"))
         rows = conn.execute(stmt).fetchall()
         # Convert row objects/mappings to dicts for clean usage
         return [dict(row._mapping) for row in rows]
@@ -105,5 +105,9 @@ def get_open_positions_count(mode: str) -> int:
     """
     engine = get_engine()
     with engine.connect() as conn:
-        stmt = select(func.count()).select_from(positions).where(positions.c.mode == mode)
+        stmt = (
+            select(func.count())
+            .select_from(positions)
+            .where((positions.c.mode == mode) & (positions.c.status == "open"))
+        )
         return conn.execute(stmt).scalar() or 0

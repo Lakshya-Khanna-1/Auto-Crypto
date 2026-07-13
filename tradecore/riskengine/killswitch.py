@@ -31,7 +31,7 @@ async def trigger_killswitch(reason: str, adapter=None) -> None:
     set_kv("killswitch", "triggered")
     get_state().set_kill_switch(True)
 
-    mode = get_state().current_mode.value
+    mode = str(get_state().current_mode)
     open_positions = get_open_positions(mode)
     details = {
         "reason": reason,
@@ -63,6 +63,16 @@ async def trigger_killswitch(reason: str, adapter=None) -> None:
         positions_flattened=flatten_success,
     )
 
+    from tradecore.notifications.notifier import send_telegram_alert
+
+    outcome = "SUCCESS" if flatten_success else "FAILED"
+    await send_telegram_alert(
+        f"🚨 *KILL-SWITCH TRIGGERED!*\n"
+        f"Reason: {reason}\n"
+        f"Positions Flatten Outcome: `{outcome}`\n"
+        f"Time: {datetime.now(UTC).isoformat()}"
+    )
+
 
 def rearm_killswitch(confirmation: str) -> bool:
     """
@@ -88,7 +98,7 @@ async def run_watchdog(adapter=None) -> None:
     global flatten_retry_errors_count
     settings = get_settings()
     state = get_state()
-    mode = state.current_mode.value
+    mode = str(state.current_mode)
 
     # Check if killswitch is already active
     killswitch_active = state.kill_switch_active or (get_kv("killswitch") == "triggered")
@@ -105,6 +115,12 @@ async def run_watchdog(adapter=None) -> None:
                 await adapter.cancel_all()
                 await adapter.flatten()
                 logger.info("Positions successfully flattened during active kill-switch retry.")
+                from tradecore.notifications.notifier import send_telegram_alert
+
+                await send_telegram_alert(
+                    "✅ *Watchdog Resolution Alert*\n"
+                    "Positions successfully flattened during active kill-switch retry."
+                )
             except Exception as e:
                 logger.critical(f"Flatten retry failed: {e}")
                 # Increment consecutive errors counter
@@ -113,6 +129,14 @@ async def run_watchdog(adapter=None) -> None:
                     logger.error(
                         "ALARM: Kill-switch active but flatten retries repeatedly "
                         "failing (5 consecutive errors)!"
+                    )
+                    from tradecore.notifications.notifier import send_telegram_alert
+
+                    await send_telegram_alert(
+                        f"🚨 *ALARM: KILL-SWITCH FLATTEN FAILURE!*\n"
+                        f"Retry count: {flatten_retry_errors_count}\n"
+                        f"Active open positions remain: {len(open_positions)}!\n"
+                        f"Error detail: {e}"
                     )
         return
 
@@ -155,7 +179,7 @@ async def run_watchdog(adapter=None) -> None:
     for pos in open_positions:
         symbol = pos["symbol"]
         price = state.get_ticker_price(symbol)
-        stop_loss = pos.get("stop_loss")
+        stop_loss = pos.get("stop_price")
 
         if stop_loss is not None and price is not None:
             if price <= stop_loss:

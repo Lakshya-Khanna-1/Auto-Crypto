@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Auto Crypto Trader</title>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    .glass-card {
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 1rem;
+    }
+  </style>
+</head>
+<body class="h-full flex items-center justify-center p-6 antialiased font-sans">
+  <div class="glass-card max-w-sm w-full p-8 space-y-6">
+    <div class="text-center space-y-2">
+      <h1 class="font-outfit text-2xl font-bold tracking-tight text-white">ACCESS PORTAL</h1>
+      <p class="text-xs text-slate-400">Password protection is active for network bindings.</p>
+    </div>
+
+    <form action="/login" method="POST" class="space-y-4">
+      <div>
+        <label for="password" class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold font-outfit block mb-1">Enter Secret Code</label>
+        <input type="password" id="password" name="password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500 outline-none px-3 py-2 text-sm rounded-lg text-slate-200">
+      </div>
+
+      <button type="submit" class="w-full py-2.5 text-xs font-bold uppercase tracking-wider font-outfit rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all">
+        Unlock Dashboard
+      </button>
+    </form>
+  </div>
+</body>
+</html>

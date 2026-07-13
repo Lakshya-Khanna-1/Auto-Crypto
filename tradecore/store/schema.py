@@ -1,53 +1,51 @@
-from sqlalchemy import Column, DateTime, Float, Integer, MetaData, String, Table
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, MetaData, String, Table
 
 metadata = MetaData()
+
+# positions Table
+positions = Table(
+    "positions",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("mode", String, nullable=False),
+    Column("symbol", String, nullable=False),
+    Column("side", String, nullable=False),
+    Column("qty", Float, nullable=False),
+    Column("entry_price", Float, nullable=False),
+    Column("stop_price", Float, nullable=True),
+    Column("opened_ts", String, nullable=False),
+    Column("closed_ts", String, nullable=True),
+    Column("exit_price", Float, nullable=True),
+    Column("realized_pnl", Float, nullable=True),
+    Column("fees_total", Float, nullable=True),
+    Column("status", String, nullable=False),
+)
 
 # trades Table
 trades = Table(
     "trades",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
+    sa_fk := Column("position_id", Integer, ForeignKey("positions.id"), nullable=True),
+    Column("ts", String, nullable=False),
+    Column("mode", String, nullable=False),
     Column("symbol", String, nullable=False),
     Column("side", String, nullable=False),
-    Column("mode", String, nullable=False),
-    Column("entry_time", DateTime, nullable=False),
-    Column("entry_price", Float, nullable=False),
-    Column("entry_qty", Float, nullable=False),
-    Column("exit_time", DateTime, nullable=True),
-    Column("exit_price", Float, nullable=True),
-    Column("exit_qty", Float, nullable=True),
-    Column("pnl", Float, nullable=True),
-    Column("pnl_pct", Float, nullable=True),
-    Column("status", String, nullable=False),
-    Column("exchange_order_id", String, nullable=True),
-    Column("notes", String, nullable=True),
-)
-
-# positions Table
-positions = Table(
-    "positions",
-    metadata,
-    Column("symbol", String, primary_key=True),
-    Column("side", String, nullable=False),
-    Column("mode", String, nullable=False),
     Column("qty", Float, nullable=False),
-    Column("entry_price", Float, nullable=False),
-    Column("entry_time", DateTime, nullable=False),
-    Column("unrealized_pnl", Float, nullable=False),
-    Column("stop_loss", Float, nullable=True),
-    Column("take_profit", Float, nullable=True),
+    Column("price", Float, nullable=False),
+    Column("fee", Float, nullable=False),
+    Column("order_id", String, nullable=False),
+    Column("strategy", String, nullable=True),
 )
 
 # equity_snapshots Table
 equity_snapshots = Table(
     "equity_snapshots",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("timestamp", DateTime, nullable=False),
-    Column("mode", String, nullable=False),
+    Column("ts", String, primary_key=True),
+    Column("mode", String, primary_key=True),
     Column("balance", Float, nullable=False),
     Column("equity", Float, nullable=False),
-    Column("drawdown_pct", Float, nullable=False),
 )
 
 # mode_changes Table

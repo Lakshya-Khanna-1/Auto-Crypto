@@ -147,24 +147,24 @@ def test_approve_max_positions_reached():
             insert(positions).values(
                 symbol="ETH/USDT",
                 side="long",
-                mode=state.current_mode.value,
+                mode=str(state.current_mode),
                 qty=10.0,
                 entry_price=10.0,
-                entry_time=datetime.now(UTC),
-                unrealized_pnl=0.0,
-                stop_loss=8.0,
+                opened_ts=datetime.now(UTC).isoformat(),
+                stop_price=8.0,
+                status="open",
             )
         )
         conn.execute(
             insert(positions).values(
                 symbol="SOL/USDT",
                 side="long",
-                mode=state.current_mode.value,
+                mode=str(state.current_mode),
                 qty=10.0,
                 entry_price=10.0,
-                entry_time=datetime.now(UTC),
-                unrealized_pnl=0.0,
-                stop_loss=8.0,
+                opened_ts=datetime.now(UTC).isoformat(),
+                stop_price=8.0,
+                status="open",
             )
         )
 
@@ -185,11 +185,11 @@ def test_approve_exit_never_blocked():
             insert(positions).values(
                 symbol="BTC/USDT",
                 side="long",
-                mode=state.current_mode.value,
+                mode=str(state.current_mode),
                 qty=5.0,
                 entry_price=20000.0,
-                entry_time=datetime.now(UTC),
-                unrealized_pnl=0.0,
+                opened_ts=datetime.now(UTC).isoformat(),
+                status="open",
             )
         )
 
@@ -213,11 +213,11 @@ def test_approve_drawdown_limit_breaches():
     # HWM = 11,000, current = 10,000 (Daily dd = 9.09% > limit of 3%)
     with engine.begin() as conn:
         conn.execute(
-            insert(app_kv).values(key=f"daily_hwm_{state.current_mode.value}", value="11000.0")
+            insert(app_kv).values(key=f"daily_hwm_{str(state.current_mode)}", value="11000.0")
         )
         conn.execute(
             insert(app_kv).values(
-                key=f"daily_hwm_date_{state.current_mode.value}",
+                key=f"daily_hwm_date_{str(state.current_mode)}",
                 value=datetime.now(UTC).strftime("%Y-%m-%d"),
             )
         )
@@ -280,12 +280,12 @@ async def test_watchdog_stop_loss_hit_flat_order():
             insert(positions).values(
                 symbol="BTC/USDT",
                 side="long",
-                mode=state.current_mode.value,
+                mode=str(state.current_mode),
                 qty=1.2,
                 entry_price=100.0,
-                entry_time=datetime.now(UTC),
-                unrealized_pnl=0.0,
-                stop_loss=90.0,
+                opened_ts=datetime.now(UTC).isoformat(),
+                stop_price=90.0,
+                status="open",
             )
         )
 

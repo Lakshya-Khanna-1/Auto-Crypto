@@ -46,15 +46,42 @@ class Position:
 class ExecutionAdapter(ABC):
     @abstractmethod
     async def place(self, order: ApprovedOrder) -> Fill:
-        # Stub: See Epic E5.T1 for full paper/live execution engine implementation
-        raise NotImplementedError("ExecutionAdapter.place will be implemented in Epic E5.T1")
+        raise NotImplementedError()
 
     @abstractmethod
     async def flatten(self, symbol: str | None = None) -> list[Fill]:
-        # Stub: See Epic E5.T1 for full paper/live execution engine implementation
-        raise NotImplementedError("ExecutionAdapter.flatten will be implemented in Epic E5.T1")
+        raise NotImplementedError()
 
     @abstractmethod
     async def get_balance(self) -> dict:
-        # Stub: See Epic E5.T1 for full paper/live execution engine implementation
-        raise NotImplementedError("ExecutionAdapter.get_balance will be implemented in Epic E5.T1")
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_open_orders(self) -> list:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def cancel_all(self) -> None:
+        raise NotImplementedError()
+
+
+_adapters: dict[str, ExecutionAdapter] = {}
+
+
+def get_adapter(mode: str) -> ExecutionAdapter:
+    """
+    Lazy singleton registry to retrieve the appropriate execution adapter.
+    """
+    global _adapters
+    if mode not in _adapters:
+        if mode == "paper":
+            from tradecore.execution.paper import PaperAdapter
+
+            _adapters[mode] = PaperAdapter()
+        elif mode == "live":
+            from tradecore.execution.live import LiveAdapter
+
+            _adapters[mode] = LiveAdapter()
+        else:
+            raise ValueError(f"Unknown execution adapter mode: {mode}")
+    return _adapters[mode]

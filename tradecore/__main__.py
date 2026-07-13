@@ -24,7 +24,15 @@ def run_selfcheck() -> bool:
     # 1. Configuration load
     try:
         settings = get_settings()
-        print(f"[-] Config load: OK (mode={settings.trading.mode.value})")
+        print(f"[-] Config load: OK (mode={str(settings.trading.mode)})")
+        if settings.dashboard.host == "0.0.0.0":
+            if not os.environ.get("DASHBOARD_PASSWORD"):
+                print(
+                    "[X] DASHBOARD_PASSWORD env var is required when "
+                    "dashboard host is set to 0.0.0.0"
+                )
+                return False
+            print("[-] Security configuration check: OK (DASHBOARD_PASSWORD set)")
     except Exception as e:
         print(f"[X] Config load failed: {e}")
         return False

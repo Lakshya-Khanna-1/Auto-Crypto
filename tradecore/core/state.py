@@ -14,6 +14,14 @@ class RuntimeState:
         self._total_drawdown_pct: float = 0.0
         self._last_ticker_times: dict[str, float] = {}
         self._last_ticker_prices: dict[str, float] = {}
+        self._strategy_paused: bool = False
+
+    @property
+    def strategy_paused(self) -> bool:
+        return self._strategy_paused
+
+    def set_strategy_paused(self, paused: bool) -> None:
+        self._strategy_paused = paused
 
     def update_ticker(self, symbol: str, price: float, timestamp: float) -> None:
         """

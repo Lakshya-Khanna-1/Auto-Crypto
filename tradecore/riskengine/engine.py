@@ -28,16 +28,16 @@ def get_portfolio_equity(mode: str) -> float:
         balance_str = get_kv("live_balance")
         balance = float(balance_str) if balance_str is not None else 10000.0
 
-    # Sum unrealized PnL
-    unrealized_pnl = 0.0
+    # Sum mark-to-market value of open positions
+    open_pos_value = 0.0
     open_positions = get_open_positions(mode)
     for pos in open_positions:
         symbol = pos["symbol"]
         price = get_state().get_ticker_price(symbol)
         if price is not None:
-            unrealized_pnl += pos["qty"] * (price - pos["entry_price"])
+            open_pos_value += pos["qty"] * price
 
-    return balance + unrealized_pnl
+    return balance + open_pos_value
 
 
 def update_and_get_drawdowns(mode: str, equity: float) -> tuple[float, float]:
@@ -104,7 +104,7 @@ def approve(
     """
     settings = get_settings()
     state = get_state()
-    mode = state.current_mode.value
+    mode = str(state.current_mode)
 
     # 1. Kill-switch check
     killswitch_active = state.kill_switch_active or (get_kv("killswitch") == "triggered")

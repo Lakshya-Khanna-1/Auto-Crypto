@@ -1,50 +1,48 @@
-trading:
-  mode: paper                # backtest | paper | live
-  exchange: binance          # any ccxt id; swap requires only this line + keys
-  symbols: [BTC/USDT, ETH/USDT, SOL/USDT, BNB/USDT, XRP/USDT]
-  timeframe: 1h
-  base_currency: USDT
-
-paper:
-  starting_balance: 10000    # USDT
-  fee_pct: 0.10              # taker fee simulated
-  slippage_pct: 0.05         # applied against the trader on every fill
-
-risk:
-  risk_per_trade_pct: 1.0
-  max_open_positions: 2
-  max_total_exposure_pct: 30
-  max_daily_drawdown_pct: 3.0
-  max_total_drawdown_pct: 10.0
-  max_data_staleness_sec: 300
-  max_consecutive_rejections: 3
-
-strategy:
-  name: ema_trend            # or ml_lgbm after M9
-  ml_model_path: data/models/lgbm_latest.txt
-  ml_threshold: 0.60         # min predicted probability to enter
-  ema_fast: 20
-  ema_slow: 50
-  atr_period: 14
-  atr_stop_mult: 2.0
-
-live_guard:
-  require_paper_trades: 20
-  require_paper_days: 14
-  allow_override: false
-
 dashboard:
   host: 127.0.0.1
   port: 8080
-
-telegram:
-  enabled: true
-  chat_id: ""
-
+live_guard:
+  allow_override: false
+  require_paper_days: 14
+  require_paper_trades: 20
 ollama:
+  embed_model: nomic-embed-text
   enabled: true
+  fast_model: llama3.2:3b
   host: http://127.0.0.1:11434
   main_model: qwen2.5:7b-instruct-q4_K_M
-  fast_model: llama3.2:3b
-  embed_model: nomic-embed-text
   request_timeout_sec: 60
+paper:
+  fee_pct: 0.1
+  slippage_pct: 0.05
+  starting_balance: 10000
+risk:
+  max_consecutive_rejections: 3
+  max_daily_drawdown_pct: 3.0
+  max_data_staleness_sec: 300
+  max_open_positions: 2
+  max_total_drawdown_pct: 10.0
+  max_total_exposure_pct: 30
+  risk_per_trade_pct: 1.0
+strategy:
+  atr_period: 14
+  atr_stop_mult: 2.0
+  ema_fast: 20
+  ema_slow: 50
+  ml_model_path: data/models/lgbm_latest.txt
+  ml_threshold: 0.6
+  name: ema_trend
+telegram:
+  chat_id: ''
+  enabled: true
+trading:
+  base_currency: USDT
+  exchange: binance
+  mode: paper
+  symbols:
+  - BTC/USDT
+  - ETH/USDT
+  - SOL/USDT
+  - BNB/USDT
+  - XRP/USDT
+  timeframe: 1h
