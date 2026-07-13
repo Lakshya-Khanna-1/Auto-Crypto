@@ -1,9 +1,14 @@
 import asyncio
 import json
 import logging
+import sys
 from datetime import UTC, datetime
+from pathlib import Path
 
 from sqlalchemy import insert, select
+
+# Resolve project path in sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from tradecore.core.state import get_state
 from tradecore.execution.adapter import ApprovedOrder
