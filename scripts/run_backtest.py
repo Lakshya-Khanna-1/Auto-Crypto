@@ -52,7 +52,10 @@ def main():
         nargs="?",
         const="all",
         default=None,
-        help="Compare primary --strategy with comma-separated list of strategies (e.g. ema_trend,donchian_breakout)",
+        help=(
+            "Compare primary --strategy with comma-separated list of strategies "
+            "(e.g. ema_trend,donchian_breakout)"
+        ),
     )
     parser.add_argument(
         "--walk-forward",
@@ -85,14 +88,13 @@ def main():
     print(f"Loaded {len(df)} candles.")
 
     from tradecore.core.config import get_settings
-    from tradecore.strategy.ema_trend import EMATrendStrategy
-    from tradecore.strategy.ml_lgbm import MLStrategy
 
     settings = get_settings()
 
     def get_strat_helper(strat_name):
         if strat_name == "ml_lgbm":
             from tradecore.strategy.ml_lgbm import MLStrategy
+
             return MLStrategy, {
                 "model_path": settings.strategy.ml_model_path,
                 "threshold": settings.strategy.ml_threshold,
@@ -100,6 +102,7 @@ def main():
             }
         elif strat_name == "ema_trend_adx":
             from tradecore.strategy.ema_trend_adx import EmaTrendAdxStrategy
+
             return EmaTrendAdxStrategy, {
                 "ema_fast": settings.strategy.ema_fast,
                 "ema_slow": settings.strategy.ema_slow,
@@ -110,6 +113,7 @@ def main():
             }
         elif strat_name == "donchian_breakout":
             from tradecore.strategy.donchian_breakout import DonchianBreakoutStrategy
+
             return DonchianBreakoutStrategy, {
                 "donchian_entry": settings.strategy.donchian_entry,
                 "donchian_exit": settings.strategy.donchian_exit,
@@ -118,6 +122,7 @@ def main():
             }
         else:
             from tradecore.strategy.ema_trend import EMATrendStrategy
+
             return EMATrendStrategy, {
                 "fast_period": settings.strategy.ema_fast,
                 "slow_period": settings.strategy.ema_slow,

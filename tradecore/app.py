@@ -707,15 +707,16 @@ async def api_equity(range: str = "all") -> list:
 
 @app.get("/api/candles")
 async def api_candles(symbol: str, timeframe: str = "1h", range: str = "all") -> list:
-    from tradecore.store import candles as candle_store
     import datetime
+
+    from tradecore.store import candles as candle_store
 
     df = candle_store.read(symbol, timeframe)
     if df.empty:
         return []
 
     if range != "all":
-        now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+        now_ms = int(datetime.datetime.now(datetime.UTC).timestamp() * 1000)
         start_ms = now_ms
         if range == "1d":
             start_ms = now_ms - (24 * 60 * 60 * 1000)
@@ -728,20 +729,23 @@ async def api_candles(symbol: str, timeframe: str = "1h", range: str = "all") ->
 
     result = []
     for _, row in df.iterrows():
-        result.append({
-            "time": int(row["ts"] // 1000),
-            "open": float(row["open"]),
-            "high": float(row["high"]),
-            "low": float(row["low"]),
-            "close": float(row["close"]),
-            "volume": float(row["volume"]),
-        })
+        result.append(
+            {
+                "time": int(row["ts"] // 1000),
+                "open": float(row["open"]),
+                "high": float(row["high"]),
+                "low": float(row["low"]),
+                "close": float(row["close"]),
+                "volume": float(row["volume"]),
+            }
+        )
     return result
 
 
 @app.get("/api/trades/markers")
 async def api_trades_markers(symbol: str, mode: str | None = None) -> list:
     import datetime
+
     if mode is None:
         state = get_state()
         mode = str(state.current_mode)
@@ -764,11 +768,13 @@ async def api_trades_markers(symbol: str, mode: str | None = None) -> list:
             time_sec = int(dt.timestamp())
         except Exception:
             time_sec = 0
-        result.append({
-            "time": time_sec,
-            "side": r.side,
-            "price": r.price,
-        })
+        result.append(
+            {
+                "time": time_sec,
+                "side": r.side,
+                "price": r.price,
+            }
+        )
     return result
 
 
@@ -979,6 +985,7 @@ async def api_rearm(req: RearmRequest) -> dict:
         )
 
     from tradecore.riskengine.killswitch import rearm_killswitch
+
     rearm_killswitch("RE-ARM")
 
     # Clear unresolved DB indicators

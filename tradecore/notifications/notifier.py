@@ -2,7 +2,7 @@ import logging
 import time
 from datetime import UTC, datetime
 
-from sqlalchemy import insert, update
+from sqlalchemy import insert
 from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
 
@@ -161,6 +161,7 @@ async def tg_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         return
 
     from tradecore.riskengine.killswitch import rearm_killswitch
+
     rearm_killswitch("RE-ARM")
 
     engine = get_engine()

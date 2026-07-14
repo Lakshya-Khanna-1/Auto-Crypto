@@ -107,14 +107,11 @@ def main():
 
     for f_idx in range(1, 6):
         train_ts_limit = unique_ts[f_idx * part_size]
-        val_ts_limit = (
-            unique_ts[(f_idx + 1) * part_size] if f_idx < 5 else unique_ts[-1] + 1
-        )
+        val_ts_limit = unique_ts[(f_idx + 1) * part_size] if f_idx < 5 else unique_ts[-1] + 1
 
         train_fold = pre_heldout_df[pre_heldout_df["ts"] < train_ts_limit]
         val_fold = pre_heldout_df[
-            (pre_heldout_df["ts"] >= train_ts_limit)
-            & (pre_heldout_df["ts"] < val_ts_limit)
+            (pre_heldout_df["ts"] >= train_ts_limit) & (pre_heldout_df["ts"] < val_ts_limit)
         ]
 
         x_tr, y_tr = train_fold[feature_cols], train_fold["label"]

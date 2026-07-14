@@ -42,7 +42,7 @@ def _adx(df: pd.DataFrame, period: int) -> pd.Series:
     atr = _atr(df, period)
     plus_di = 100 * plus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr
     minus_di = 100 * minus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr
-    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, pd.NA)
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, float("nan"))
     return dx.ewm(alpha=1 / period, adjust=False).mean()
 
 
@@ -98,7 +98,9 @@ class EmaTrendAdxStrategy(Strategy):
         crossed_down = fast.iloc[-1] < slow.iloc[-1] and fast.iloc[-2] >= slow.iloc[-2]
         trending = pd.notna(adx.iloc[-1]) and adx.iloc[-1] >= self.adx_min
 
-        symbol = df_ind["symbol"].iloc[-1] if "symbol" in cols else df_ind.attrs.get("symbol", "UNKNOWN")
+        symbol = (
+            df_ind["symbol"].iloc[-1] if "symbol" in cols else df_ind.attrs.get("symbol", "UNKNOWN")
+        )
 
         if position is None:
             if crossed_up and trending:

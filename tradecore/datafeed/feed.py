@@ -139,6 +139,7 @@ class DataFeed:
                 get_state().update_ticker(symbol, price, self.last_tick[symbol].received_at)
                 try:
                     from tradecore.core.events import Event, get_event_bus
+
                     await get_event_bus().publish(
                         Event(type="tick", data={"symbol": symbol, "price": price})
                     )
@@ -180,6 +181,7 @@ class DataFeed:
             get_state().update_ticker(symbol, price, self.last_tick[symbol].received_at)
             try:
                 from tradecore.core.events import Event, get_event_bus
+
                 await get_event_bus().publish(
                     Event(type="tick", data={"symbol": symbol, "price": price})
                 )

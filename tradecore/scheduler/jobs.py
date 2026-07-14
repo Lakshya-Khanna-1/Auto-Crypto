@@ -51,9 +51,13 @@ async def candle_sync_job() -> None:
             limit = 3
             if len(df_existing) < settings.strategy.ema_slow:
                 limit = max(settings.strategy.ema_slow + 50, 100)
-                logger.info(f"Bootstrapping candles for {sym} (limit={limit}) on timeframe {timeframe}...")
+                logger.info(
+                    f"Bootstrapping candles for {sym} (limit={limit}) on timeframe {timeframe}..."
+                )
 
-            candles = await loop.run_in_executor(None, feed.fetch_candles, sym, timeframe, None, limit)
+            candles = await loop.run_in_executor(
+                None, feed.fetch_candles, sym, timeframe, None, limit
+            )
             if not candles:
                 continue
 
