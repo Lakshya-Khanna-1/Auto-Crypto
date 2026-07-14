@@ -34,7 +34,9 @@ from tradecore.core.state import get_state
 from tradecore.datafeed.feed import get_ccxt_client, get_data_feed
 from tradecore.execution.adapter import ApprovedOrder, get_adapter
 from tradecore.scheduler.jobs import (
+    annotate_closed_positions_job,
     candle_sync_job,
+    daily_report_job,
     equity_snapshot_job,
     risk_watchdog_job,
     strategy_tick_job,
@@ -231,10 +233,30 @@ async def lifespan(fastapi_app: FastAPI):
         scheduler.remove_all_jobs()
         scheduler.add_job(risk_watchdog_job, "interval", seconds=60, id="risk_watchdog")
         logger.info("Watchdog job registered.")
+
+        # Seed tickers on startup to prevent immediate watchdog data staleness trigger
+        logger.info("Seeding initial ticker prices to prevent data staleness trigger...")
+        feed = get_data_feed()
+        for symbol in symbols:
+            try:
+                await feed.poll_ticker(symbol)
+            except Exception as e:
+                logger.error(f"Failed to fetch initial ticker for {symbol} on startup: {e}")
+
         try:
             await risk_watchdog_job()
         except Exception as e:
             logger.error(f"Failed to execute initial watchdog check at startup: {e}")
+
+        try:
+            await candle_sync_job()
+        except Exception as e:
+            logger.error(f"Failed to execute initial candle sync at startup: {e}")
+
+        try:
+            await strategy_tick_job()
+        except Exception as e:
+            logger.error(f"Failed to execute initial strategy tick at startup: {e}")
 
         # 3. Add remaining interval scheduler tasks
         scheduler.add_job(candle_sync_job, "interval", minutes=5, id="candle_sync")
@@ -244,10 +266,23 @@ async def lifespan(fastapi_app: FastAPI):
         scheduler.add_job(
             strategy_tick_job,
             "cron",
-            hour="*",
-            minute="0",
+            minute="*",
             second="30",
             id="strategy_tick",
+        )
+        scheduler.add_job(
+            daily_report_job,
+            "cron",
+            hour="0",
+            minute="15",
+            timezone="UTC",
+            id="daily_report",
+        )
+        scheduler.add_job(
+            annotate_closed_positions_job,
+            "interval",
+            seconds=60,
+            id="annotate_closed_positions",
         )
 
     scheduler.start()
@@ -491,6 +526,19 @@ async def api_close_position(position_id: int) -> dict:
         raise HTTPException(status_code=409, detail=f"Manual close failed: {e}") from e
 
 
+@app.get("/api/report/latest")
+async def api_report_latest() -> dict:
+    import json
+
+    val = get_kv("latest_report")
+    if not val:
+        return {"ts": None, "text": "No daily report generated yet."}
+    try:
+        return json.loads(val)
+    except Exception:
+        return {"ts": None, "text": "No daily report generated yet."}
+
+
 @app.get("/api/trades")
 async def api_trades(mode: str = "paper", page: int = 1, page_size: int = 50) -> dict[str, Any]:
     offset = (page - 1) * page_size
@@ -518,6 +566,7 @@ async def api_trades(mode: str = "paper", page: int = 1, page_size: int = 50) ->
                 positions.c.opened_ts,
                 positions.c.closed_ts,
                 positions.c.mode,
+                positions.c.annotation,
                 trades.c.strategy,
             )
             .select_from(
@@ -551,6 +600,7 @@ async def api_trades(mode: str = "paper", page: int = 1, page_size: int = 50) ->
                 "closed_ts": r.closed_ts,
                 "strategy": r.strategy or "unknown",
                 "mode": r.mode,
+                "annotation": r.annotation or "",
             }
         )
 
@@ -861,9 +911,8 @@ async def api_rearm(req: RearmRequest) -> dict:
             status_code=409, detail="Must type RE-ARM to authorize watchdog release."
         )
 
-    state = get_state()
-    state.set_kill_switch(False)
-    state.reset_rejections()
+    from tradecore.riskengine.killswitch import rearm_killswitch
+    rearm_killswitch("RE-ARM")
 
     # Clear unresolved DB indicators
     engine = get_engine()
@@ -906,8 +955,8 @@ async def api_reset_paper() -> dict:
     engine = get_engine()
     with engine.connect() as conn:
         with conn.begin():
-            conn.execute(positions.delete().where(positions.c.mode == "paper"))
             conn.execute(trades.delete().where(trades.c.mode == "paper"))
+            conn.execute(positions.delete().where(positions.c.mode == "paper"))
             conn.execute(equity_snapshots.delete().where(equity_snapshots.c.mode == "paper"))
 
     # Reset balance in kv

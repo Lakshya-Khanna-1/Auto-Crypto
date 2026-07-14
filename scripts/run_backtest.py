@@ -42,6 +42,17 @@ def main():
     parser.add_argument("--end", type=parse_date, help="End Date (YYYY-MM-DD)")
     parser.add_argument("--days", type=int, help="Historical Backfill limit in Days")
     parser.add_argument(
+        "--strategy",
+        default="ema_trend",
+        choices=["ema_trend", "ml_lgbm"],
+        help="Strategy to run",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Compare ml_lgbm and ema_trend side-by-side",
+    )
+    parser.add_argument(
         "--walk-forward",
         action="store_true",
         help="Run walk-forward simulation partitioned across 4 equal-sized folds",
@@ -71,6 +82,27 @@ def main():
 
     print(f"Loaded {len(df)} candles.")
 
+    from tradecore.core.config import get_settings
+    from tradecore.strategy.ema_trend import EMATrendStrategy
+    from tradecore.strategy.ml_lgbm import MLStrategy
+
+    settings = get_settings()
+
+    def get_strat_helper(strat_name):
+        if strat_name == "ml_lgbm":
+            return MLStrategy, {
+                "model_path": settings.strategy.ml_model_path,
+                "threshold": settings.strategy.ml_threshold,
+                "atr_stop_mult": settings.strategy.atr_stop_mult,
+            }
+        else:
+            return EMATrendStrategy, {
+                "fast_period": settings.strategy.ema_fast,
+                "slow_period": settings.strategy.ema_slow,
+                "atr_period": settings.strategy.atr_period,
+                "atr_stop_mult": settings.strategy.atr_stop_mult,
+            }
+
     run_config = {
         "symbol": args.symbol,
         "timeframe": args.timeframe,
@@ -80,16 +112,37 @@ def main():
         "end_param": (
             datetime.fromtimestamp(end_ms / 1000, tz=UTC).isoformat() if end_ms else "None"
         ),
+        "strategy": args.strategy,
+        "compare": args.compare,
         "walk_forward": args.walk_forward,
     }
 
     results = {}
 
-    if args.walk_forward:
-        print("Executing Walk-Forward Validation across 4 equal folds...")
+    if args.compare:
+        print("\nExecuting side-by-side Strategy Comparison...")
+        ema_cls, ema_params = get_strat_helper("ema_trend")
+        ml_cls, ml_params = get_strat_helper("ml_lgbm")
+
+        ema_metrics = run_backtest(df, symbol=args.symbol, strategy_class=ema_cls, **ema_params)
+        ml_metrics = run_backtest(df, symbol=args.symbol, strategy_class=ml_cls, **ml_params)
+
+        print("\n--- EMATrendStrategy Performance ---")
+        print(format_metrics(ema_metrics))
+        print("\n--- MLStrategy Performance ---")
+        print(format_metrics(ml_metrics))
+
+        results["config"] = run_config
+        results["ema_metrics"] = ema_metrics
+        results["ml_metrics"] = ml_metrics
+
+    elif args.walk_forward:
+        print(f"Executing Walk-Forward Validation for {args.strategy} across 4 equal folds...")
         folds_metrics = []
         n = len(df)
         fold_size = n // 4
+
+        strat_cls, strat_params = get_strat_helper(args.strategy)
 
         for i in range(4):
             s_idx = i * fold_size
@@ -103,7 +156,9 @@ def main():
                 f"\n--- Fold {i+1} : {fold_start_dt.strftime('%Y-%m-%d')} to "
                 f"{fold_end_dt.strftime('%Y-%m-%d')} ({len(fold_df)} candles) ---"
             )
-            fold_results = run_backtest(fold_df, symbol=args.symbol)
+            fold_results = run_backtest(
+                fold_df, symbol=args.symbol, strategy_class=strat_cls, **strat_params
+            )
             print(format_metrics(fold_results))
 
             folds_metrics.append(
@@ -119,8 +174,9 @@ def main():
         results["folds"] = folds_metrics
 
     else:
-        print("\nRunning Backtest...")
-        metrics = run_backtest(df, symbol=args.symbol)
+        print(f"\nRunning Backtest for {args.strategy}...")
+        strat_cls, strat_params = get_strat_helper(args.strategy)
+        metrics = run_backtest(df, symbol=args.symbol, strategy_class=strat_cls, **strat_params)
         print("\n--- Performance Metrics Summary ---")
         print(format_metrics(metrics))
 

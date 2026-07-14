@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pandas as pd
 
@@ -47,7 +47,13 @@ async def candle_sync_job() -> None:
     for sym in symbols:
         try:
             loop = asyncio.get_running_loop()
-            candles = await loop.run_in_executor(None, feed.fetch_candles, sym, timeframe, None, 3)
+            df_existing = await loop.run_in_executor(None, candle_store.read, sym, timeframe)
+            limit = 3
+            if len(df_existing) < settings.strategy.ema_slow:
+                limit = max(settings.strategy.ema_slow + 50, 100)
+                logger.info(f"Bootstrapping candles for {sym} (limit={limit}) on timeframe {timeframe}...")
+
+            candles = await loop.run_in_executor(None, feed.fetch_candles, sym, timeframe, None, limit)
             if not candles:
                 continue
 
@@ -113,7 +119,7 @@ async def strategy_tick_job() -> None:
     if state.strategy_paused:
         logger.info("Strategy execution is currently paused. Skipping tick.")
         return
-    mode = str(state.current_mode)
+    mode = str(getattr(state.current_mode, "value", state.current_mode))
     if mode == "backtest":
         return
 
@@ -128,6 +134,14 @@ async def strategy_tick_job() -> None:
             fast_period=settings.strategy.ema_fast,
             slow_period=settings.strategy.ema_slow,
             atr_period=settings.strategy.atr_period,
+            atr_stop_mult=settings.strategy.atr_stop_mult,
+        )
+    elif settings.strategy.name == "ml_lgbm":
+        from tradecore.strategy.ml_lgbm import MLStrategy
+
+        strategy = MLStrategy(
+            model_path=settings.strategy.ml_model_path,
+            threshold=settings.strategy.ml_threshold,
             atr_stop_mult=settings.strategy.atr_stop_mult,
         )
     else:
@@ -205,7 +219,7 @@ async def equity_snapshot_job() -> None:
     """
     Saves recurring 15-minute equity snapshots to database.
     """
-    mode = str(get_state().current_mode)
+    mode = str(getattr(get_state().current_mode, "value", get_state().current_mode))
     if mode == "backtest":
         return
     try:
@@ -219,7 +233,7 @@ async def risk_watchdog_job() -> None:
     """
     Main risk watchdog triggers checking drawdowns, staleness, stops.
     """
-    mode = str(get_state().current_mode)
+    mode = str(getattr(get_state().current_mode, "value", get_state().current_mode))
     if mode == "backtest":
         return
     try:
@@ -227,3 +241,92 @@ async def risk_watchdog_job() -> None:
         await run_watchdog(adapter)
     except Exception as e:
         logger.error(f"Error encountered running watchdog job: {e}")
+
+
+async def daily_report_job() -> None:
+    """
+    Generate daily AI operations report for the active trading mode,
+    save it to app_kv, and dispatch it to Telegram if configured.
+    """
+    state = get_state()
+    mode = str(getattr(state.current_mode, "value", state.current_mode))
+    if mode == "backtest":
+        return
+    logger.info(f"Triggering daily_report_job for mode: {mode}")
+    try:
+        import json
+
+        from tradecore.ailayer.reports import generate_daily_report
+        from tradecore.notifications.notifier import send_telegram_alert
+
+        report_text = await generate_daily_report(mode)
+        ts_str = datetime.now(UTC).isoformat()
+
+        # Save JSON string structure to app_kv
+        report_data = {"ts": ts_str, "text": report_text}
+        set_kv("latest_report", json.dumps(report_data))
+        logger.info("Daily report successfully generated and saved to app_kv.")
+
+        # Dispatch to Telegram
+        await send_telegram_alert(f"📋 *Daily Operations Report ({mode.upper()})*\n\n{report_text}")
+    except Exception as e:
+        logger.error(f"Error executing daily_report_job: {e}")
+
+
+async def annotate_closed_positions_job() -> None:
+    """
+    Background job to annotate closed positions with explanations using the fast AI model.
+    """
+    settings = get_settings()
+    if not settings.ollama.enabled:
+        return
+
+    state = get_state()
+    mode = str(getattr(state.current_mode, "value", state.current_mode))
+    if mode == "backtest":
+        return
+
+    try:
+        from tradecore.ailayer.client import generate_response
+        from tradecore.ailayer.prompts import TRADE_ANNOTATION_PROMPT
+        from tradecore.store.repo import (
+            get_signal_reason_for_position,
+            get_unannotated_closed_positions,
+            update_position_annotation,
+        )
+
+        unannotated = get_unannotated_closed_positions(mode)
+        if not unannotated:
+            return
+
+        logger.info(f"Found {len(unannotated)} unannotated closed positions in mode: {mode}")
+
+        for pos in unannotated:
+            pos_id = pos["id"]
+            symbol = pos["symbol"]
+            opened_ts = pos["opened_ts"]
+            entry_price = pos["entry_price"]
+            exit_price = pos.get("exit_price") or 0.0
+            pnl = pos.get("realized_pnl") or 0.0
+
+            # Find matching signal reason
+            reason = get_signal_reason_for_position(symbol, opened_ts)
+            if not reason:
+                reason = "technical crossover"
+
+            # Format the prompt
+            prompt = TRADE_ANNOTATION_PROMPT.format(
+                reason=reason, entry_price=entry_price, exit_price=exit_price, pnl=pnl
+            )
+
+            # Generate response
+            explanation = await generate_response(settings.ollama.fast_model, prompt)
+            if explanation:
+                clean_exp = explanation.strip().replace("\n", " ")
+                update_position_annotation(pos_id, clean_exp)
+                logger.info(f"Successfully annotated position {pos_id}: {clean_exp}")
+            else:
+                logger.warning(f"Failed to generate annotation for position {pos_id}.")
+
+    except Exception as e:
+        logger.error(f"Error in annotate_closed_positions_job: {e}")

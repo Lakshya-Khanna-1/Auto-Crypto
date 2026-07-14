@@ -222,6 +222,7 @@
               <th class="py-3 px-4">Duration</th>
               <th class="py-3 px-4">Strategy</th>
               <th class="py-3 px-4">Mode</th>
+              <th class="py-3 px-4">AI Crossover Explanation</th>
             </tr>
           </thead>
           <tbody id="trades-table-body" class="text-sm divide-y divide-white/5 text-slate-200">
@@ -262,6 +263,18 @@
         </table>
         <div id="signals-empty" class="hidden text-center py-8 text-slate-500 text-sm">
           No signal log entries yet.
+        </div>
+      </div>
+    <!-- Panel 6 — Daily AI Operations Report -->
+    <section class="glass-card p-6">
+      <div class="flex items-center justify-between cursor-pointer" id="panel-report-header">
+        <h2 class="font-outfit font-bold tracking-tight text-lg text-white">Panel 6 — Daily AI Operations Report</h2>
+        <span id="report-toggle" class="text-sm font-semibold text-slate-400 bg-slate-800 px-2 py-1 rounded hover:bg-slate-700 transition-all select-none">Expand [+]</span>
+      </div>
+      <div id="panel-report-content" class="hidden mt-4 pt-4 border-t border-white/5 space-y-4">
+        <p id="report-timestamp" class="text-xs font-mono text-slate-500">Report generated at: --</p>
+        <div id="report-text" class="text-sm text-slate-350 leading-relaxed whitespace-pre-wrap font-sans p-4 bg-slate-950/60 rounded-lg border border-white/5">
+          No daily report generated yet.
         </div>
       </div>
     </section>

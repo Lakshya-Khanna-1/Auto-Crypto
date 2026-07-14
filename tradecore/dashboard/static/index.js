@@ -101,6 +101,22 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   txtConfirm.addEventListener("input", validateLiveConfirm);
   chkOverride.addEventListener("change", validateLiveConfirm);
+
+  // Panel 6 Toggle bindings
+  const reportHeader = document.getElementById("panel-report-header");
+  const reportContent = document.getElementById("panel-report-content");
+  const reportToggle = document.getElementById("report-toggle");
+
+  reportHeader.addEventListener("click", () => {
+    const isHidden = reportContent.classList.contains("hidden");
+    if (isHidden) {
+      reportContent.classList.remove("hidden");
+      reportToggle.textContent = "Collapse [-]";
+    } else {
+      reportContent.classList.add("hidden");
+      reportToggle.textContent = "Expand [+]";
+    }
+  });
 });
 
 // Websocket connection loop
@@ -184,6 +200,7 @@ function loadAllPanelData() {
   loadSignals();
   loadEquityData();
   loadSystemData();
+  loadAIReport();
 }
 
 // Fetch REST API Data
@@ -401,6 +418,7 @@ function renderTradesHistory(items, total) {
       <td class="py-3 px-4 text-xs font-semibold text-slate-405">${durationStr}</td>
       <td class="py-3 px-4 text-slate-450 font-mono text-xs">${t.strategy}</td>
       <td class="py-3 px-4 uppercase text-xs font-semibold text-slate-450">${t.mode}</td>
+      <td class="py-3 px-4 text-xs max-w-xs truncate text-slate-400" title="${t.annotation || ''}">${t.annotation || '--'}</td>
     `;
     tradesBody.appendChild(row);
   });
@@ -769,5 +787,25 @@ async function resetPaperAccount() {
     }
   } catch (e) {
     alert(`Reset request error: ${e}`);
+  }
+}
+
+// Fetch latest daily AI report
+async function loadAIReport() {
+  try {
+    const res = await fetch("/api/report/latest");
+    const data = await res.json();
+    const tsEl = document.getElementById("report-timestamp");
+    const textEl = document.getElementById("report-text");
+    
+    if (data && data.ts) {
+      tsEl.textContent = `Report generated at: ${new Date(data.ts).toLocaleString()}`;
+      textEl.textContent = data.text;
+    } else {
+      tsEl.textContent = "Report generated at: --";
+      textEl.textContent = data.text || "No daily report generated yet.";
+    }
+  } catch (e) {
+    console.error("Error loading daily report", e);
   }
 }

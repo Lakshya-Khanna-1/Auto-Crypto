@@ -1,6 +1,6 @@
 dashboard:
   host: 127.0.0.1
-  port: 8080
+  port: 9090
 live_guard:
   allow_override: false
   require_paper_days: 14
@@ -8,9 +8,9 @@ live_guard:
 ollama:
   embed_model: nomic-embed-text
   enabled: true
-  fast_model: llama3.2:3b
+  fast_model: llama3.1:8b
   host: http://127.0.0.1:11434
-  main_model: qwen2.5:7b-instruct-q4_K_M
+  main_model: llama3.1:8b
   request_timeout_sec: 60
 paper:
   fee_pct: 0.1
@@ -45,4 +45,4 @@ trading:
   - SOL/USDT
   - BNB/USDT
   - XRP/USDT
-  timeframe: 1h
+  timeframe: 5m

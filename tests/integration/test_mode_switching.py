@@ -7,6 +7,14 @@ from tradecore.core.config import TradingMode, get_settings
 from tradecore.core.state import get_state, switch_mode
 
 
+@pytest.fixture(autouse=True)
+def clear_state_cache():
+    state = get_state()
+    state._last_ticker_times.clear()
+    state._last_ticker_prices.clear()
+    yield
+
+
 @pytest.mark.asyncio
 async def test_live_to_paper_direct():
     state = get_state()

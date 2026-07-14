@@ -11,7 +11,7 @@ from tradecore.riskengine.killswitch import rearm_killswitch, run_watchdog
 from tradecore.riskengine.sizing import calculate_position_size
 from tradecore.store.db import get_engine
 from tradecore.store.repo import set_kv
-from tradecore.store.schema import app_kv, killswitch_events, positions, signals
+from tradecore.store.schema import app_kv, killswitch_events, positions, signals, trades
 
 
 class MockAdapter:
@@ -43,6 +43,7 @@ def clean_db():
         conn.execute(app_kv.delete())
         conn.execute(signals.delete())
         conn.execute(killswitch_events.delete())
+        conn.execute(trades.delete())
         conn.execute(positions.delete())
 
     state = get_state()

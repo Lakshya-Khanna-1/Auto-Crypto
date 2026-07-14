@@ -8,6 +8,7 @@ import ccxt.pro as ccxtpro
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from tradecore.core.config import get_settings
+from tradecore.core.state import get_state
 from tradecore.datafeed.models import Candle, Ticker
 
 logger = logging.getLogger(__name__)
@@ -135,6 +136,7 @@ class DataFeed:
                     price=price,
                     received_at=time.time(),
                 )
+                get_state().update_ticker(symbol, price, self.last_tick[symbol].received_at)
                 # Successful tick resets failure count
                 self.ws_fail_count = 0
             except Exception as e:
@@ -168,6 +170,7 @@ class DataFeed:
                 price=price,
                 received_at=time.time(),
             )
+            get_state().update_ticker(symbol, price, self.last_tick[symbol].received_at)
         except Exception as e:
             logger.error(f"REST fetch_ticker error for {symbol}: {e}")
 

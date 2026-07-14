@@ -14,3 +14,5 @@ python-telegram-bot==21.3
 ollama==0.2.1
 vectorbt==0.26.1
 backtesting==0.6.5
+lightgbm
+scikit-learn

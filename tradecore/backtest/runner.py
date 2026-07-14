@@ -2,7 +2,6 @@ import pandas as pd
 from backtesting import Backtest, Strategy as BtStrategy
 
 from tradecore.execution.adapter import Position
-from tradecore.strategy.ema_trend import EMATrendStrategy
 
 
 class BacktestStrategyWrapper(BtStrategy):
@@ -55,6 +54,7 @@ class BacktestStrategyWrapper(BtStrategy):
 def run_backtest(
     df: pd.DataFrame,
     symbol: str,
+    strategy_class=None,
     init_cash: float = 10000.0,
     commission: float = 0.001,
     spread: float = 0.0005,
@@ -63,6 +63,11 @@ def run_backtest(
     """
     Run backtest on a candle DataFrame for a specified symbol.
     """
+    if strategy_class is None:
+        from tradecore.strategy.ema_trend import EMATrendStrategy
+
+        strategy_class = EMATrendStrategy
+
     if df.empty:
         return {
             "total_return_pct": 0.0,
@@ -76,7 +81,7 @@ def run_backtest(
         }
 
     # Precalculate indicators
-    strat_calc = EMATrendStrategy(**strategy_params)
+    strat_calc = strategy_class(**strategy_params)
     df_bt = strat_calc.compute_indicators(df)
 
     # Format column names for backtesting.py compatibility
@@ -90,14 +95,16 @@ def run_backtest(
             "ts": "ts",
         }
     )
+    # Filter duplicate indexes to prevent Backtest from raising formatting exceptions
     df_bt.index = pd.to_datetime(df_bt["ts"], unit="ms")
+    df_bt = df_bt[~df_bt.index.duplicated(keep="first")]
     df_bt = df_bt.sort_index()
 
     # Define dedicated wrapper class
     class ActiveBtStrategy(BacktestStrategyWrapper):
         pass
 
-    ActiveBtStrategy.strategy_class = EMATrendStrategy
+    ActiveBtStrategy.strategy_class = strategy_class
     ActiveBtStrategy.strategy_params = strategy_params
     ActiveBtStrategy.data_full = df_bt
     ActiveBtStrategy.symbol = symbol

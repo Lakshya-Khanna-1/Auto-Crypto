@@ -19,6 +19,7 @@ positions = Table(
     Column("realized_pnl", Float, nullable=True),
     Column("fees_total", Float, nullable=True),
     Column("status", String, nullable=False),
+    Column("annotation", String, nullable=True),
 )
 
 # trades Table

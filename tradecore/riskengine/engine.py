@@ -152,7 +152,7 @@ def approve(
         )
         # Log approval
         signal_id = save_signal_log(
-            signal.symbol, signal.side, signal.confidence, 1, "approved", "exit_approved"
+            signal.symbol, signal.side, signal.confidence, 1, "approved", signal.reason
         )
         order.signal_id = signal_id
         return True, "exit_approved", order
@@ -223,7 +223,7 @@ def approve(
         signal.confidence,
         1,
         "approved",
-        "clear",
+        signal.reason,
         indicator_value=None,
     )
     order.signal_id = signal_id
