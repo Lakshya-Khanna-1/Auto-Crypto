@@ -89,7 +89,10 @@ async def track_fill(fill: Fill, stop_price: float | None = None, mode: str = "p
                 pos_id = pos_data["id"]
                 entry_price = pos_data["entry_price"]
                 fees_total = (pos_data["fees_total"] or 0.0) + fill.fee
-                realized_pnl = (fill.price - entry_price) * fill.qty
+                # Net of both entry and exit fees, matching the actual cash
+                # impact on the account balance (see PaperAdapter.place / fee
+                # deduction on both sides of the round trip).
+                realized_pnl = (fill.price - entry_price) * fill.qty - fees_total
 
                 # 2. Update position row in place
                 upd_stmt = (
