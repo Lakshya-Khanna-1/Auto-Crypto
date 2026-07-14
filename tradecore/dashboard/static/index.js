@@ -12,6 +12,15 @@ const tradesPageSize = 50;
 let equityChart = null;
 let currentRange = "all";
 
+// Price Chart Variables
+let priceChart = null;
+let candlestickSeries = null;
+let lineSeries = null;
+let currentChartSymbol = "BTC/USDT";
+let currentChartView = "candle";
+let currentChartRange = "all";
+let lastCandle = null;
+
 // DOM Elements
 const modeBadge = document.getElementById("mode-badge");
 const headerEquity = document.getElementById("header-equity");
@@ -64,6 +73,7 @@ const btnRearmSubmit = document.getElementById("btn-rearm-submit");
 // Initialize Application
 window.addEventListener("DOMContentLoaded", () => {
   initChart();
+  initPriceChart();
   connectWebSocket();
   loadAllPanelData();
 
@@ -164,12 +174,32 @@ function handleWsEvent(type, data) {
     case "tick":
       tickerPrices[data.symbol] = data.price;
       updateLivePnls();
+      if (data.symbol === currentChartSymbol && lastCandle) {
+        const timeSec = Math.floor(Date.now() / 1000);
+        const candleTime = Math.floor(timeSec / 3600) * 3600;
+        if (candleTime > lastCandle.time) {
+          lastCandle = {
+            time: candleTime,
+            open: data.price,
+            high: data.price,
+            low: data.price,
+            close: data.price
+          };
+        } else {
+          lastCandle.high = Math.max(lastCandle.high, data.price);
+          lastCandle.low = Math.min(lastCandle.low, data.price);
+          lastCandle.close = data.price;
+        }
+        if (candlestickSeries) candlestickSeries.update(lastCandle);
+        if (lineSeries) lineSeries.update({ time: lastCandle.time, value: data.price });
+      }
       break;
     case "fill":
       loadPositions();
       loadTradesHistory();
       loadStatus();
       loadEquityData();
+      loadPriceChartData();
       break;
     case "mode":
       loadAllPanelData();
@@ -201,6 +231,7 @@ function loadAllPanelData() {
   loadEquityData();
   loadSystemData();
   loadAIReport();
+  loadPriceChartData();
 }
 
 // Fetch REST API Data
@@ -807,5 +838,146 @@ async function loadAIReport() {
     }
   } catch (e) {
     console.error("Error loading daily report", e);
+  }
+}
+
+
+function initPriceChart() {
+  const container = document.getElementById("price-chart-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  priceChart = LightweightCharts.createChart(container, {
+    layout: {
+      background: { type: 'solid', color: 'rgba(15, 23, 42, 0.45)' },
+      textColor: '#94a3b8',
+    },
+    grid: {
+      vertLines: { color: 'rgba(148, 163, 184, 0.05)' },
+      horzLines: { color: 'rgba(148, 163, 184, 0.05)' },
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Normal,
+    },
+    timeScale: {
+      borderColor: 'rgba(148, 163, 184, 0.1)',
+      timeVisible: true,
+      secondsVisible: false,
+    },
+  });
+
+  candlestickSeries = priceChart.addCandlestickSeries({
+    upColor: '#10b981',
+    downColor: '#ef4444',
+    borderVisible: false,
+    wickUpColor: '#10b981',
+    wickDownColor: '#ef4444',
+  });
+
+  lineSeries = priceChart.addLineSeries({
+    color: '#3b82f6',
+    lineWidth: 2,
+  });
+
+  const resizeObserver = new ResizeObserver(entries => {
+    if (entries.length === 0 || !entries[0].contentRect) return;
+    const { width, height } = entries[0].contentRect;
+    priceChart.resize(width, height);
+  });
+  resizeObserver.observe(container);
+
+  const symbolSelector = document.getElementById("price-chart-symbol");
+  if (symbolSelector) {
+    symbolSelector.addEventListener("change", (e) => {
+      currentChartSymbol = e.target.value;
+      loadPriceChartData();
+    });
+  }
+
+  const btnCandle = document.getElementById("btn-chart-view-candle");
+  const btnLine = document.getElementById("btn-chart-view-line");
+
+  if (btnCandle && btnLine) {
+    btnCandle.addEventListener("click", () => {
+      btnCandle.classList.add("bg-blue-600", "text-white");
+      btnCandle.classList.remove("text-slate-400");
+      btnLine.classList.remove("bg-blue-600", "text-white");
+      btnLine.classList.add("text-slate-400");
+      currentChartView = "candle";
+      toggleSeriesVisibility();
+    });
+
+    btnLine.addEventListener("click", () => {
+      btnLine.classList.add("bg-blue-600", "text-white");
+      btnLine.classList.remove("text-slate-400");
+      btnCandle.classList.remove("bg-blue-600", "text-white");
+      btnCandle.classList.add("text-slate-400");
+      currentChartView = "line";
+      toggleSeriesVisibility();
+    });
+  }
+
+  document.querySelectorAll(".btn-chart-range").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      document.querySelectorAll(".btn-chart-range").forEach(b => b.classList.remove("bg-blue-600", "text-white"));
+      e.target.classList.add("bg-blue-600", "text-white");
+      currentChartRange = e.target.getAttribute("data-chart-range");
+      loadPriceChartData();
+    });
+  });
+}
+
+function toggleSeriesVisibility() {
+  if (currentChartView === "candle") {
+    candlestickSeries.applyOptions({ visible: true });
+    lineSeries.applyOptions({ visible: false });
+  } else {
+    candlestickSeries.applyOptions({ visible: false });
+    lineSeries.applyOptions({ visible: true });
+  }
+}
+
+async function loadPriceChartData() {
+  if (!priceChart) return;
+  try {
+    const resCandles = await fetch(`/api/candles?symbol=${encodeURIComponent(currentChartSymbol)}&range=${currentChartRange}&timeframe=1h`);
+    const candles = await resCandles.json();
+
+    if (candles.length > 0) {
+      candles.sort((a, b) => a.time - b.time);
+      candlestickSeries.setData(candles);
+
+      const lineData = candles.map(c => ({ time: c.time, value: c.close }));
+      lineSeries.setData(lineData);
+
+      lastCandle = candles[candles.length - 1];
+    } else {
+      candlestickSeries.setData([]);
+      lineSeries.setData([]);
+      lastCandle = null;
+    }
+
+    const resMarkers = await fetch(`/api/trades/markers?symbol=${encodeURIComponent(currentChartSymbol)}&mode=${currentMode}`);
+    const markers = await resMarkers.json();
+
+    const chartMarkers = [];
+    markers.forEach(m => {
+      chartMarkers.push({
+        time: m.time,
+        position: m.side === "buy" ? "belowBar" : "aboveBar",
+        color: m.side === "buy" ? "#10b981" : "#ef4444",
+        shape: m.side === "buy" ? "arrowUp" : "arrowDown",
+        text: m.side === "buy" ? "Buy" : "Sell",
+      });
+    });
+
+    candlestickSeries.setMarkers(chartMarkers);
+    lineSeries.setMarkers(chartMarkers);
+
+    toggleSeriesVisibility();
+    priceChart.timeScale().fitContent();
+  } catch (e) {
+    console.error("Error loading price chart data", e);
   }
 }

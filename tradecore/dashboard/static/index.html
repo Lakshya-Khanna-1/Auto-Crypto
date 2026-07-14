@@ -12,6 +12,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lightweight Charts CDN -->
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -112,55 +114,124 @@
 
   <main class="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
 
+    <!-- Row 1: Dual-Chart Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      <!-- Panel 1 — Equity Curve (Takes 2 cols on desktop) -->
-      <section class="lg:col-span-2 glass-card p-6 flex flex-col justify-between min-h-[350px]">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="font-outfit font-bold tracking-tight text-lg text-white">Panel 1 — Account Equity Curve</h2>
+      <!-- Left Panel: Candlestick/Line Price Chart -->
+      <section class="lg:col-span-2 glass-card p-6 flex flex-col justify-between min-h-[440px]">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div class="flex items-center gap-3">
+            <h2 class="font-outfit font-bold tracking-tight text-lg text-white">Price Chart</h2>
+            <!-- Symbol Dropdown -->
+            <select id="price-chart-symbol" class="bg-slate-900 border border-slate-800 text-xs rounded-lg px-2.5 py-1.5 focus:border-blue-500 focus:ring-blue-500 text-slate-200 outline-none font-semibold">
+              <option value="BTC/USDT" selected>BTC/USDT</option>
+              <option value="ETH/USDT">ETH/USDT</option>
+              <option value="SOL/USDT">SOL/USDT</option>
+              <option value="BNB/USDT">BNB/USDT</option>
+              <option value="XRP/USDT">XRP/USDT</option>
+            </select>
+            <!-- Line/Candlestick Toggle -->
+            <div class="flex bg-slate-900/60 p-0.5 rounded-lg border border-slate-850/80">
+              <button id="btn-chart-view-candle" class="px-2.5 py-1 text-[10px] font-bold rounded bg-blue-600 text-white transition-all uppercase tracking-wide">Candles</button>
+              <button id="btn-chart-view-line" class="px-2.5 py-1 text-[10px] font-bold rounded text-slate-400 hover:text-white transition-all uppercase tracking-wide">Line</button>
+            </div>
+          </div>
+          <!-- Timeframe Range -->
           <div class="flex gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-800/80">
-            <button data-range="1d" class="btn-range px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition-all">1D</button>
-            <button data-range="1w" class="btn-range px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition-all">1W</button>
-            <button data-range="1m" class="btn-range px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition-all">1M</button>
-            <button data-range="all" class="btn-range px-3 py-1 text-xs font-medium rounded-md bg-blue-600 text-white transition-all">All</button>
+            <button data-chart-range="1d" class="btn-chart-range px-3 py-1 text-[10px] font-semibold rounded-md text-slate-400 hover:text-white transition-all uppercase tracking-wide">1D</button>
+            <button data-chart-range="1w" class="btn-chart-range px-3 py-1 text-[10px] font-semibold rounded-md text-slate-400 hover:text-white transition-all uppercase tracking-wide">1W</button>
+            <button data-chart-range="1m" class="btn-chart-range px-3 py-1 text-[10px] font-semibold rounded-md text-slate-400 hover:text-white transition-all uppercase tracking-wide">1M</button>
+            <button data-chart-range="all" class="btn-chart-range px-3 py-1 text-[10px] font-semibold rounded-md bg-blue-600 text-white transition-all uppercase tracking-wide">All</button>
           </div>
         </div>
-        <div class="flex-1 min-h-[220px]">
-          <canvas id="equity-chart"></canvas>
+        <div class="flex-1 w-full min-h-[300px] relative" id="price-chart-container">
+          <!-- Lightweight Charts Mounts Here -->
         </div>
       </section>
 
-      <!-- Panel 5 — System Status -->
-      <section class="glass-card p-6 flex flex-col justify-between">
-        <h2 class="font-outfit font-bold tracking-tight text-lg text-white mb-4">Panel 5 — System Health Status</h2>
-        <div class="space-y-4 flex-1">
-          <div class="flex items-center justify-between py-2 border-b border-white/5">
-            <span class="text-sm text-slate-400">Connection state</span>
-            <span id="status-connection" class="text-sm font-semibold text-emerald-400">WS Connected</span>
+      <!-- Right Panel: Equity Curve -->
+      <section class="glass-card p-6 flex flex-col justify-between min-h-[440px]">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-outfit font-bold tracking-tight text-lg text-white">Account Equity</h2>
+          <div class="flex gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-800/80">
+            <button data-range="1d" class="btn-range px-2 py-0.5 text-[10px] font-semibold rounded-md text-slate-400 hover:text-white transition-all">1D</button>
+            <button data-range="1w" class="btn-range px-2 py-0.5 text-[10px] font-semibold rounded-md text-slate-400 hover:text-white transition-all">1W</button>
+            <button data-range="1m" class="btn-range px-2 py-0.5 text-[10px] font-semibold rounded-md text-slate-400 hover:text-white transition-all">1M</button>
+            <button data-range="all" class="btn-range px-2 py-0.5 text-[10px] font-semibold rounded-md bg-blue-600 text-white transition-all">All</button>
           </div>
-          <div class="flex items-center justify-between py-2 border-b border-white/5">
-            <span class="text-sm text-slate-400">Uptime</span>
-            <span id="status-uptime" class="text-sm font-semibold text-slate-200">--</span>
-          </div>
-          <div class="flex items-center justify-between py-2 border-b border-white/5">
-            <span class="text-sm text-slate-400">Risk Engine Status</span>
-            <span id="status-risk" class="text-sm font-semibold text-emerald-400">Armed</span>
-          </div>
-          <div class="flex items-center justify-between py-2 border-b border-white/5">
-            <span class="text-sm text-slate-400">Strategy Executions</span>
-            <span id="status-strategy" class="text-sm font-semibold text-slate-200">Active</span>
-          </div>
-          <div class="py-2 border-b border-white/5">
-            <div class="flex justify-between mb-2">
-              <span class="text-sm text-slate-400">Ollama LLM Reachable</span>
-              <span id="status-ollama" class="text-sm font-semibold">Checking...</span>
+        </div>
+        <div class="flex-1 w-full min-h-[300px] flex items-center justify-center">
+          <canvas id="equity-chart" class="w-full h-full"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <!-- Row 2: Positions & System Health Status -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Panel 2 — Active Open Positions Table -->
+      <section class="lg:col-span-2 glass-card p-6 flex flex-col justify-between">
+        <div>
+          <h2 class="font-outfit font-bold tracking-tight text-lg text-white mb-4">Panel 2 — Active Open Positions</h2>
+          <div class="overflow-x-auto w-full">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-white/5 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <th class="py-3 px-4">Symbol</th>
+                  <th class="py-3 px-4">Side</th>
+                  <th class="py-3 px-4">Qty</th>
+                  <th class="py-3 px-4">Entry Price</th>
+                  <th class="py-3 px-4">Current Price</th>
+                  <th class="py-3 px-4">Stop Price</th>
+                  <th class="py-3 px-4">Unrealized P&L</th>
+                  <th class="py-3 px-4">Opened Timestamp</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="positions-table-body" class="text-sm divide-y divide-white/5 text-slate-200">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+            <div id="positions-empty" class="hidden text-center py-8 text-slate-500 text-sm">
+              No active open positions.
             </div>
           </div>
-          <div class="py-2">
-            <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Feed Delays</span>
-            <div id="status-feed-delays" class="text-sm space-y-1 mt-2 text-slate-300">
-              <!-- Dynamically populated -->
-              None active.
+        </div>
+      </section>
+
+      <!-- Panel 5 — System Health Status -->
+      <section class="glass-card p-6 flex flex-col justify-between">
+        <div>
+          <h2 class="font-outfit font-bold tracking-tight text-lg text-white mb-4">Panel 5 — System Health Status</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between py-2 border-b border-white/5">
+              <span class="text-sm text-slate-400">Connection state</span>
+              <span id="status-connection" class="text-sm font-semibold text-emerald-400">WS Connected</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-white/5">
+              <span class="text-sm text-slate-400">Uptime</span>
+              <span id="status-uptime" class="text-sm font-semibold text-slate-200">--</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-white/5">
+              <span class="text-sm text-slate-400">Risk Engine Status</span>
+              <span id="status-risk" class="text-sm font-semibold text-emerald-400">Armed</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-white/5">
+              <span class="text-sm text-slate-400">Strategy Executions</span>
+              <span id="status-strategy" class="text-sm font-semibold text-slate-200">Active</span>
+            </div>
+            <div class="py-2 border-b border-white/5">
+              <div class="flex justify-between mb-2">
+                <span class="text-sm text-slate-400">Ollama LLM Reachable</span>
+                <span id="status-ollama" class="text-sm font-semibold">Checking...</span>
+              </div>
+            </div>
+            <div class="py-2">
+              <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Feed Delays</span>
+              <div id="status-feed-delays" class="text-sm space-y-1 mt-2 text-slate-300">
+                <!-- Dynamically populated -->
+                None active.
+              </div>
             </div>
           </div>
         </div>
@@ -169,34 +240,6 @@
         </div>
       </section>
     </div>
-
-    <!-- Panel 2 — Open Positions Table -->
-    <section class="glass-card p-6">
-      <h2 class="font-outfit font-bold tracking-tight text-lg text-white mb-4">Panel 2 — Active Open Positions</h2>
-      <div class="overflow-x-auto w-full">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-white/5 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-              <th class="py-3 px-4">Symbol</th>
-              <th class="py-3 px-4">Side</th>
-              <th class="py-3 px-4">Qty</th>
-              <th class="py-3 px-4">Entry Price</th>
-              <th class="py-3 px-4">Current Price</th>
-              <th class="py-3 px-4">Stop Price</th>
-              <th class="py-3 px-4">Unrealized P&L</th>
-              <th class="py-3 px-4">Opened Timestamp</th>
-              <th class="py-3 px-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="positions-table-body" class="text-sm divide-y divide-white/5 text-slate-200">
-            <!-- Dynamically populated -->
-          </tbody>
-        </table>
-        <div id="positions-empty" class="hidden text-center py-8 text-slate-500 text-sm">
-          No active open positions.
-        </div>
-      </div>
-    </section>
 
     <!-- Panel 3 — Trade History -->
     <section class="glass-card p-6">
