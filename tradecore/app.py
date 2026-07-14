@@ -178,6 +178,13 @@ async def lifespan(fastapi_app: FastAPI):
 
                 exchange_bal = await adapter.exchange.fetch_balance()
 
+                # Seed the cached live balance now so the risk engine never
+                # has to fall back to a fabricated equity figure.
+                try:
+                    await adapter.get_balance()
+                except Exception as bal_ex:
+                    logger.error(f"Reconciliation: failed to seed live_balance cache: {bal_ex}")
+
                 for symbol in symbols:
                     base = symbol.split("/")[0]
                     actual_bal = (
@@ -266,7 +273,7 @@ async def lifespan(fastapi_app: FastAPI):
         scheduler.add_job(
             strategy_tick_job,
             "cron",
-            minute="*",
+            minute="0",
             second="30",
             id="strategy_tick",
         )
@@ -396,7 +403,7 @@ def health_endpoint() -> dict[str, str]:
 
 @app.get("/api/status")
 async def api_status() -> dict:
-    from tradecore.riskengine.engine import get_portfolio_equity
+    from tradecore.riskengine.engine import get_live_balance, get_portfolio_equity
 
     state = get_state()
     settings = get_settings()
@@ -406,14 +413,19 @@ async def api_status() -> dict:
     if mode == "paper":
         bal_str = get_kv("paper_balance")
         balance = float(bal_str) if bal_str is not None else settings.paper.starting_balance
+        starting_balance = settings.paper.starting_balance
     else:
-        bal_str = get_kv("live_balance")
-        balance = float(bal_str) if bal_str is not None else 10000.0
+        balance = get_live_balance()
+        if balance is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Live balance is unknown: no exchange balance fetch has succeeded yet.",
+            )
+        starting_balance = balance
 
     equity = get_portfolio_equity(mode)
 
     # Calculate PNL Total
-    starting_balance = settings.paper.starting_balance if mode == "paper" else 10000.0
     pnl_total = equity - starting_balance
 
     # Calculate PNL today relative to midnight UTC snapshot
