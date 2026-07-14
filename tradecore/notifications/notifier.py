@@ -44,7 +44,7 @@ def check_chat_id(update: Update) -> bool:
 async def tg_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not check_chat_id(update):
         return
-    from tradecore.riskengine.engine import get_portfolio_equity
+    from tradecore.riskengine.engine import get_live_balance, get_portfolio_equity
 
     state = get_state()
     settings = get_settings()
@@ -53,12 +53,18 @@ async def tg_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if mode == "paper":
         bal_str = get_kv("paper_balance")
         balance = float(bal_str) if bal_str is not None else settings.paper.starting_balance
+        starting_balance = settings.paper.starting_balance
     else:
-        bal_str = get_kv("live_balance")
-        balance = float(bal_str) if bal_str is not None else 10000.0
+        balance = get_live_balance()
+        if balance is None:
+            await update.message.reply_text(
+                "⚠️ Live balance is unknown: no exchange balance fetch has succeeded yet.",
+                parse_mode="Markdown",
+            )
+            return
+        starting_balance = balance
 
     equity = get_portfolio_equity(mode)
-    starting_balance = settings.paper.starting_balance if mode == "paper" else 10000.0
     pnl_total = equity - starting_balance
 
     msg = (

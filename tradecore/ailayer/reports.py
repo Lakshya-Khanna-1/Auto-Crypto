@@ -31,8 +31,17 @@ def build_report_context(mode: str) -> dict:
     ending_equity = repo.get_equity_snapshot_closest_to(mode, end_str, order="desc")
 
     if starting_equity is None:
-        settings = get_settings()
-        starting_equity = settings.paper.starting_balance if mode == "paper" else 10000.0
+        if mode == "paper":
+            settings = get_settings()
+            starting_equity = settings.paper.starting_balance
+        else:
+            from tradecore.riskengine.engine import get_live_balance
+
+            starting_equity = get_live_balance()
+            if starting_equity is None:
+                # No live balance fetch has succeeded yet; degrade gracefully
+                # (AILayer.md: advisory-only, never fabricate figures).
+                starting_equity = ending_equity if ending_equity is not None else 0.0
     if ending_equity is None:
         ending_equity = starting_equity
 

@@ -16,6 +16,15 @@ from tradecore.store.repo import (
 logger = logging.getLogger("tradecore.riskengine.engine")
 
 
+def get_live_balance() -> float | None:
+    """
+    Last known live account balance from a real exchange fetch, or None if
+    one has never succeeded. Never fabricates a value.
+    """
+    balance_str = get_kv("live_balance")
+    return float(balance_str) if balance_str is not None else None
+
+
 def get_portfolio_equity(mode: str) -> float:
     """
     Calculate the total equity: balance + unrealized PnL.
@@ -25,8 +34,12 @@ def get_portfolio_equity(mode: str) -> float:
         balance_str = get_kv("paper_balance")
         balance = float(balance_str) if balance_str is not None else settings.paper.starting_balance
     else:
-        balance_str = get_kv("live_balance")
-        balance = float(balance_str) if balance_str is not None else 10000.0
+        balance = get_live_balance()
+        if balance is None:
+            raise RuntimeError(
+                "live_balance is unknown: no exchange balance fetch has succeeded yet. "
+                "Refusing to compute LIVE equity from a fabricated value."
+            )
 
     # Sum mark-to-market value of open positions
     open_pos_value = 0.0

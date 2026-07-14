@@ -8,7 +8,7 @@ from tradecore.core.config import get_settings
 from tradecore.datafeed.feed import get_ccxt_client
 from tradecore.execution.adapter import ApprovedOrder, ExecutionAdapter, Fill
 from tradecore.execution.tracker import track_fill
-from tradecore.store.repo import get_open_positions
+from tradecore.store.repo import get_open_positions, set_kv
 
 logger = logging.getLogger("tradecore.execution.live")
 
@@ -121,6 +121,13 @@ class LiveAdapter(ExecutionAdapter):
         # 8. Record fill update to the database positions and trades tracker
         await track_fill(fill, stop_price=order.stop_price, mode="live")
 
+        # 9. Refresh cached live balance from the exchange so the risk engine
+        # never has to fall back to a fabricated equity figure.
+        try:
+            await self.get_balance()
+        except Exception as e:
+            logger.error(f"Failed to refresh live balance cache after fill: {e}")
+
         logger.info(
             f"Live order executed: id={order_id}, price={avg_price:.4f}, " f"fee={fee_cost:.4f}"
         )
@@ -158,6 +165,7 @@ class LiveAdapter(ExecutionAdapter):
         elif base_curr in bal:
             total_val = float(bal[base_curr])
 
+        set_kv("live_balance", str(total_val))
         return {"balance": total_val, "mode": "live"}
 
     async def get_open_orders(self) -> list:
