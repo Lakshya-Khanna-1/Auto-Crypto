@@ -30,7 +30,7 @@ Assumptions / Pending Checkpoints:
 
 ## Continue
 Commands to resume work:
-- run_platform.bat (Runs trading server for 30 days, retrains model, restarts loop)
+- nssm start tradecore (persistent service; see scripts/install_service.ps1 / WindowsDeployment.md §4)
 - .venv\Scripts\activate
 - python -m tradecore --selfcheck
 - pytest
