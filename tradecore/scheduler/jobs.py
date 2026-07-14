@@ -136,6 +136,26 @@ async def strategy_tick_job() -> None:
             atr_period=settings.strategy.atr_period,
             atr_stop_mult=settings.strategy.atr_stop_mult,
         )
+    elif settings.strategy.name == "ema_trend_adx":
+        from tradecore.strategy.ema_trend_adx import EmaTrendAdxStrategy
+
+        strategy = EmaTrendAdxStrategy(
+            ema_fast=settings.strategy.ema_fast,
+            ema_slow=settings.strategy.ema_slow,
+            atr_period=settings.strategy.atr_period,
+            atr_stop_mult=settings.strategy.atr_stop_mult,
+            adx_period=settings.strategy.adx_period,
+            adx_min=settings.strategy.adx_min,
+        )
+    elif settings.strategy.name == "donchian_breakout":
+        from tradecore.strategy.donchian_breakout import DonchianBreakoutStrategy
+
+        strategy = DonchianBreakoutStrategy(
+            donchian_entry=settings.strategy.donchian_entry,
+            donchian_exit=settings.strategy.donchian_exit,
+            atr_period=settings.strategy.atr_period,
+            atr_stop_mult=settings.strategy.atr_stop_mult,
+        )
     elif settings.strategy.name == "ml_lgbm":
         from tradecore.strategy.ml_lgbm import MLStrategy
 

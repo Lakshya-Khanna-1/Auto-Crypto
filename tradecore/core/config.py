@@ -53,6 +53,10 @@ class StrategySettings(BaseModel):
     ema_slow: int
     atr_period: int
     atr_stop_mult: float
+    adx_period: int = 14
+    adx_min: float = 22.0
+    donchian_entry: int = 55
+    donchian_exit: int = 20
 
 
 class LiveGuardSettings(BaseModel):

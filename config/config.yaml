@@ -32,6 +32,10 @@ strategy:
   ml_model_path: data/models/lgbm_latest.txt
   ml_threshold: 0.6
   name: ema_trend
+  adx_period: 14
+  adx_min: 22.0
+  donchian_entry: 55
+  donchian_exit: 20
 telegram:
   chat_id: ''
   enabled: true
