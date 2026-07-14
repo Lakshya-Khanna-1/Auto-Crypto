@@ -44,13 +44,15 @@ def main():
     parser.add_argument(
         "--strategy",
         default="ema_trend",
-        choices=["ema_trend", "ml_lgbm"],
+        choices=["ema_trend", "ml_lgbm", "ema_trend_adx", "donchian_breakout"],
         help="Strategy to run",
     )
     parser.add_argument(
         "--compare",
-        action="store_true",
-        help="Compare ml_lgbm and ema_trend side-by-side",
+        nargs="?",
+        const="all",
+        default=None,
+        help="Compare primary --strategy with comma-separated list of strategies (e.g. ema_trend,donchian_breakout)",
     )
     parser.add_argument(
         "--walk-forward",
@@ -90,12 +92,32 @@ def main():
 
     def get_strat_helper(strat_name):
         if strat_name == "ml_lgbm":
+            from tradecore.strategy.ml_lgbm import MLStrategy
             return MLStrategy, {
                 "model_path": settings.strategy.ml_model_path,
                 "threshold": settings.strategy.ml_threshold,
                 "atr_stop_mult": settings.strategy.atr_stop_mult,
             }
+        elif strat_name == "ema_trend_adx":
+            from tradecore.strategy.ema_trend_adx import EmaTrendAdxStrategy
+            return EmaTrendAdxStrategy, {
+                "ema_fast": settings.strategy.ema_fast,
+                "ema_slow": settings.strategy.ema_slow,
+                "atr_period": settings.strategy.atr_period,
+                "atr_stop_mult": settings.strategy.atr_stop_mult,
+                "adx_period": settings.strategy.adx_period,
+                "adx_min": settings.strategy.adx_min,
+            }
+        elif strat_name == "donchian_breakout":
+            from tradecore.strategy.donchian_breakout import DonchianBreakoutStrategy
+            return DonchianBreakoutStrategy, {
+                "donchian_entry": settings.strategy.donchian_entry,
+                "donchian_exit": settings.strategy.donchian_exit,
+                "atr_period": settings.strategy.atr_period,
+                "atr_stop_mult": settings.strategy.atr_stop_mult,
+            }
         else:
+            from tradecore.strategy.ema_trend import EMATrendStrategy
             return EMATrendStrategy, {
                 "fast_period": settings.strategy.ema_fast,
                 "slow_period": settings.strategy.ema_slow,
@@ -119,22 +141,31 @@ def main():
 
     results = {}
 
-    if args.compare:
+    if args.compare is not None:
         print("\nExecuting side-by-side Strategy Comparison...")
-        ema_cls, ema_params = get_strat_helper("ema_trend")
-        ml_cls, ml_params = get_strat_helper("ml_lgbm")
+        if args.compare == "all":
+            compare_strats = ["ema_trend", "ema_trend_adx", "donchian_breakout"]
+        else:
+            compare_strats = [s.strip() for s in args.compare.split(",")]
+            if args.strategy not in compare_strats:
+                compare_strats.append(args.strategy)
 
-        ema_metrics = run_backtest(df, symbol=args.symbol, strategy_class=ema_cls, **ema_params)
-        ml_metrics = run_backtest(df, symbol=args.symbol, strategy_class=ml_cls, **ml_params)
+        compare_metrics = {}
+        for sname in compare_strats:
+            try:
+                s_cls, s_params = get_strat_helper(sname)
+                print(f"Running backtest for {sname}...")
+                metrics = run_backtest(df, symbol=args.symbol, strategy_class=s_cls, **s_params)
+                compare_metrics[sname] = metrics
+            except Exception as e:
+                print(f"Failed to run comparison backtest for strategy {sname}: {e}")
 
-        print("\n--- EMATrendStrategy Performance ---")
-        print(format_metrics(ema_metrics))
-        print("\n--- MLStrategy Performance ---")
-        print(format_metrics(ml_metrics))
+        for sname, metrics in compare_metrics.items():
+            print(f"\n--- {sname} Performance ---")
+            print(format_metrics(metrics))
 
         results["config"] = run_config
-        results["ema_metrics"] = ema_metrics
-        results["ml_metrics"] = ml_metrics
+        results["comparison_metrics"] = compare_metrics
 
     elif args.walk_forward:
         print(f"Executing Walk-Forward Validation for {args.strategy} across 4 equal folds...")
