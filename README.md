@@ -75,4 +75,8 @@ Launch the server in development mode:
 ```powershell
 .venv\Scripts\python -m tradecore
 ```
-Open your browser and navigate to `http://127.0.0.1:8080/dashboard/static/index.html` to access the trading controller.
+Open your browser and navigate to `http://127.0.0.1:9090/` to access the trading controller
+(this redirects to the dashboard; the full path is `/dashboard/static/index.html`).
+
+For persistent, always-on operation, use the NSSM Windows service instead of running this
+directly — see `scripts/install_service.ps1` and `SETUP_GUIDE.md`.
