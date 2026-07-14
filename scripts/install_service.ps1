@@ -1,11 +1,14 @@
 # PowerShell Service Installer script for Auto-Crypto platform using NSSM
 # Run this script as Administrator to install.
+# Authoritative content per docs/spec/WindowsDeployment.md Section 4.
 
 $ServiceName = "tradecore"
 $NssmExecutable = "nssm.exe"
 
-# Resolve absolute paths
-$AppDirectory = "c:\Users\Admitrator\Desktop\auto crypto trader"
+# Resolve absolute paths relative to this script's location (repo root is
+# this script's parent directory), so installation works regardless of
+# where the repo was cloned.
+$AppDirectory = Split-Path -Parent $PSScriptRoot
 $PythonExecutable = "$AppDirectory\.venv\Scripts\python.exe"
 $StdoutLog = "$AppDirectory\data\logs\service-out.log"
 $StderrLog = "$AppDirectory\data\logs\service-err.log"
@@ -36,8 +39,11 @@ Write-Output "Installing Windows Service '$ServiceName'..."
 & $NssmExecutable set $ServiceName AppStdout "$StdoutLog"
 & $NssmExecutable set $ServiceName AppStderr "$StderrLog"
 & $NssmExecutable set $ServiceName AppRotateFiles 1
-& $NssmExecutable set $ServiceName AppRotateOnline 1
 & $NssmExecutable set $ServiceName AppRotateBytes 10485760 # 10MB rotation
+& $NssmExecutable set $ServiceName AppExit Default Restart
+& $NssmExecutable set $ServiceName AppRestartDelay 5000
+& $NssmExecutable set $ServiceName Start SERVICE_AUTO_START
+& $NssmExecutable start $ServiceName
 
-Write-Output "Service '$ServiceName' registered successfully."
-Write-Output "To start the service, run: Start-Service $ServiceName"
+Write-Output "Service '$ServiceName' registered and started."
+Write-Output "Status: nssm status $ServiceName"
