@@ -137,6 +137,13 @@ class DataFeed:
                     received_at=time.time(),
                 )
                 get_state().update_ticker(symbol, price, self.last_tick[symbol].received_at)
+                try:
+                    from tradecore.core.events import Event, get_event_bus
+                    await get_event_bus().publish(
+                        Event(type="tick", data={"symbol": symbol, "price": price})
+                    )
+                except Exception as ex:
+                    logger.error(f"Failed to publish tick event for {symbol}: {ex}")
                 # Successful tick resets failure count
                 self.ws_fail_count = 0
             except Exception as e:
@@ -171,6 +178,13 @@ class DataFeed:
                 received_at=time.time(),
             )
             get_state().update_ticker(symbol, price, self.last_tick[symbol].received_at)
+            try:
+                from tradecore.core.events import Event, get_event_bus
+                await get_event_bus().publish(
+                    Event(type="tick", data={"symbol": symbol, "price": price})
+                )
+            except Exception as ex:
+                logger.error(f"Failed to publish tick event for {symbol}: {ex}")
         except Exception as e:
             logger.error(f"REST fetch_ticker error for {symbol}: {e}")
 

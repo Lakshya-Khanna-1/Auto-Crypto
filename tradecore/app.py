@@ -705,6 +705,73 @@ async def api_equity(range: str = "all") -> list:
     return [{"ts": r.ts, "equity": r.equity} for r in rows]
 
 
+@app.get("/api/candles")
+async def api_candles(symbol: str, timeframe: str = "1h", range: str = "all") -> list:
+    from tradecore.store import candles as candle_store
+    import datetime
+
+    df = candle_store.read(symbol, timeframe)
+    if df.empty:
+        return []
+
+    if range != "all":
+        now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+        start_ms = now_ms
+        if range == "1d":
+            start_ms = now_ms - (24 * 60 * 60 * 1000)
+        elif range == "1w":
+            start_ms = now_ms - (7 * 24 * 60 * 60 * 1000)
+        elif range == "1m":
+            start_ms = now_ms - (30 * 24 * 60 * 60 * 1000)
+
+        df = df[df["ts"] >= start_ms]
+
+    result = []
+    for _, row in df.iterrows():
+        result.append({
+            "time": int(row["ts"] // 1000),
+            "open": float(row["open"]),
+            "high": float(row["high"]),
+            "low": float(row["low"]),
+            "close": float(row["close"]),
+            "volume": float(row["volume"]),
+        })
+    return result
+
+
+@app.get("/api/trades/markers")
+async def api_trades_markers(symbol: str, mode: str | None = None) -> list:
+    import datetime
+    if mode is None:
+        state = get_state()
+        mode = str(state.current_mode)
+
+    engine = get_engine()
+    stmt = (
+        select(trades.c.ts, trades.c.side, trades.c.price)
+        .where(trades.c.symbol == symbol)
+        .where(trades.c.mode == mode)
+        .order_by(trades.c.ts.asc())
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(stmt).all()
+
+    result = []
+    for r in rows:
+        try:
+            clean_str = r.ts.replace("Z", "+00:00")
+            dt = datetime.datetime.fromisoformat(clean_str)
+            time_sec = int(dt.timestamp())
+        except Exception:
+            time_sec = 0
+        result.append({
+            "time": time_sec,
+            "side": r.side,
+            "price": r.price,
+        })
+    return result
+
+
 @app.get("/api/signals")
 async def api_signals(limit: int = 100) -> list:
     engine = get_engine()
