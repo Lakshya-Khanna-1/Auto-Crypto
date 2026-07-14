@@ -49,4 +49,4 @@ trading:
   - SOL/USDT
   - BNB/USDT
   - XRP/USDT
-  timeframe: 5m
+  timeframe: 1h
