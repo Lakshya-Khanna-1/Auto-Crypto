@@ -16,6 +16,8 @@ let currentRange = "all";
 let priceChart = null;
 let candlestickSeries = null;
 let lineSeries = null;
+let candleMarkersPrimitive = null;
+let lineMarkersPrimitive = null;
 let currentChartSymbol = "BTC/USDT";
 let currentChartView = "candle";
 let currentChartRange = "all";
@@ -72,8 +74,19 @@ const btnRearmSubmit = document.getElementById("btn-rearm-submit");
 
 // Initialize Application
 window.addEventListener("DOMContentLoaded", () => {
-  initChart();
-  initPriceChart();
+  // Chart init failures (e.g. a charting library API mismatch) must never
+  // block websocket/data loading/button wiring below -- a previous CDN
+  // version bump silently broke the whole dashboard this way.
+  try {
+    initChart();
+  } catch (e) {
+    console.error("Failed to initialize equity chart", e);
+  }
+  try {
+    initPriceChart();
+  } catch (e) {
+    console.error("Failed to initialize price chart", e);
+  }
   connectWebSocket();
   loadAllPanelData();
 
@@ -867,7 +880,9 @@ function initPriceChart() {
     },
   });
 
-  candlestickSeries = priceChart.addCandlestickSeries({
+  // v5 API: addCandlestickSeries/addLineSeries were removed in favor of
+  // addSeries(SeriesType, options).
+  candlestickSeries = priceChart.addSeries(LightweightCharts.CandlestickSeries, {
     upColor: '#10b981',
     downColor: '#ef4444',
     borderVisible: false,
@@ -875,10 +890,14 @@ function initPriceChart() {
     wickDownColor: '#ef4444',
   });
 
-  lineSeries = priceChart.addLineSeries({
+  lineSeries = priceChart.addSeries(LightweightCharts.LineSeries, {
     color: '#3b82f6',
     lineWidth: 2,
   });
+
+  // v5 API: series.setMarkers() was replaced by the createSeriesMarkers primitive.
+  candleMarkersPrimitive = LightweightCharts.createSeriesMarkers(candlestickSeries, []);
+  lineMarkersPrimitive = LightweightCharts.createSeriesMarkers(lineSeries, []);
 
   const resizeObserver = new ResizeObserver(entries => {
     if (entries.length === 0 || !entries[0].contentRect) return;
@@ -972,8 +991,8 @@ async function loadPriceChartData() {
       });
     });
 
-    candlestickSeries.setMarkers(chartMarkers);
-    lineSeries.setMarkers(chartMarkers);
+    candleMarkersPrimitive.setMarkers(chartMarkers);
+    lineMarkersPrimitive.setMarkers(chartMarkers);
 
     toggleSeriesVisibility();
     priceChart.timeScale().fitContent();
