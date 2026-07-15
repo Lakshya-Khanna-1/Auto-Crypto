@@ -5,7 +5,7 @@ import os
 import secrets
 import time
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from io import StringIO
 from pathlib import Path
 from typing import Any
@@ -694,19 +694,19 @@ async def api_equity(range: str = "all") -> list:
     engine = get_engine()
 
     # range settings
-    now_dt = datetime.utcnow()
+    now_dt = datetime.now(UTC)
     stmt = select(equity_snapshots.c.ts, equity_snapshots.c.equity).where(
         equity_snapshots.c.mode == mode
     )
 
     if range == "1d":
-        since_t = (now_dt - datetime.timedelta(days=1)).isoformat()
+        since_t = (now_dt - timedelta(days=1)).isoformat()
         stmt = stmt.where(equity_snapshots.c.ts >= since_t)
     elif range == "1w":
-        since_t = (now_dt - datetime.timedelta(days=7)).isoformat()
+        since_t = (now_dt - timedelta(days=7)).isoformat()
         stmt = stmt.where(equity_snapshots.c.ts >= since_t)
     elif range == "1m":
-        since_t = (now_dt - datetime.timedelta(days=30)).isoformat()
+        since_t = (now_dt - timedelta(days=30)).isoformat()
         stmt = stmt.where(equity_snapshots.c.ts >= since_t)
 
     stmt = stmt.order_by(equity_snapshots.c.ts.asc())
